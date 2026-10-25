@@ -19,7 +19,21 @@ The contract also refuses to let an invoice be sold twice, records whether each 
 | Path | What it is |
 |---|---|
 | `contracts/PayDay.sol` | The smart contract (Solidity 0.8.20+) |
+| `test/PayDay.t.sol` | Foundry tests for every contract rule |
 | `app/index.html` | The web app: Business, Client, Investor and Public board views, with a built-in demo mode |
+| `foundry.toml` | Foundry settings (compiler 0.8.24, 1,000 fuzz runs per fuzz test) |
+
+## Run the tests
+
+Needs [Foundry](https://getfoundry.sh) (`forge`).
+
+```bash
+forge test                       # run all tests
+forge test -vvv                  # with details on any failure
+forge coverage --report summary  # how much of the contract the tests exercise
+```
+
+Current result: 42 tests passing, 100% line, branch and function coverage of `PayDay.sol`. The tests cover invoice creation rules, client-only confirmation, listing and price limits, the atomic buy, double-sale rejection, resale, on-time vs late payment, overdue status, and fuzz tests with random prices and payment times.
 
 ## Run the app locally
 
@@ -34,4 +48,8 @@ Then open http://localhost:8000 in Chrome.
 
 ## Status
 
-Hackathon prototype on the Avalanche **Fuji testnet**. **Not ready for mainnet or real funds.** Before mainnet it needs: stablecoin payments, private invoice data (hash only on-chain), verified companies, pull payments, an emergency pause, automated tests and an independent security audit.
+Hackathon prototype on the Avalanche **Fuji testnet**. **Not ready for mainnet or real funds.** Before mainnet it needs: stablecoin payments, private invoice data (hash only on-chain), verified companies, pull payments, an emergency pause, a way to cancel or reprice a listing, and an independent security audit.
+
+Two of these limitations are pinned down by tests, so the fix can be checked later:
+- `test_KnownIssue_RejectingHolderBlocksClientPayment`: if the invoice holder's wallet refuses AVAX, the client cannot pay at all (fix: pull payments).
+- `test_List_RepriceWhileListed_Reverts`: a listed invoice cannot be repriced or taken off the market.
