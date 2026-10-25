@@ -1,0 +1,13 @@
+# macOS
+.DS_Store
+
+# Secrets: never commit private keys or API keys
+.env
+.env.*
+*.key
+
+# Build output (Foundry / Node, for later)
+out/
+cache/
+broadcast/
+node_modules/
