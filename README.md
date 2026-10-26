@@ -59,7 +59,7 @@ Live on **Avalanche Fuji testnet** (C-Chain, chain ID 43113), source verified on
 | Block | 60051288 |
 | Deployed | 26 October 2026 |
 
-Paste the contract address into the app's live mode to use it.
+The app has this address built in (`CONTRACT` in `app/app.html`).
 
 ## Status
 
