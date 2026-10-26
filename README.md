@@ -41,10 +41,10 @@ Current result: 42 tests passing, 100% line, branch and function coverage of `Pa
 python3 -m http.server 8000 --directory app
 ```
 
-Then open http://localhost:8000 in Chrome.
+Then open http://localhost:8000 in Chrome. That's the landing page; the app is at `/app.html`.
 
-- **Demo mode** (default): a simulated chain in the browser with the same rules as the contract. No wallet needed.
-- **Live mode**: click "Switch to live (Fuji)", paste a deployed contract address, and connect MetaMask on Avalanche Fuji. Opening the page from `http://localhost` is required, because MetaMask doesn't connect to pages opened as files.
+- **Live mode** (default): talks to the deployed Fuji contract. Anyone can read the invoices; connect MetaMask on Avalanche Fuji to act. Opening the page from `http://localhost` is required, because MetaMask doesn't connect to pages opened as files. `?c=0x…` points the app at another deploy.
+- **Demo mode** (`/app.html?demo`): a simulated chain in the browser with the same rules as the contract. No wallet needed.
 
 ## Deployment
 

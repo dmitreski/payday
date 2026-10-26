@@ -3,821 +3,665 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>PayDay</title>
+<title>PayDay · Invoice financing on Avalanche</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<meta name="description" content="Small businesses sell confirmed invoices to investors and get paid today, not in 90 days. A smart contract on Avalanche.">
+<meta property="og:title" content="PayDay · Get paid today. Not in 90 days.">
+<meta property="og:description" content="Invoice financing on Avalanche. Sell a confirmed invoice to an investor and get cash as soon as it sells. The client's payment goes to the investor automatically.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/ethers@6.13.4/dist/ethers.umd.min.js"></script>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://cdn.fontshare.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<!-- Satoshi (Fontshare, free for commercial use): closest free match to Avalanche's Aeonik -->
+<link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700,900&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/ethers@6.13.4/dist/ethers.umd.min.js" defer></script>
 <style>
-  /* Design tokens: Apple system palette, light by default (projectors wash out dark UIs) */
   :root {
-    --bg: #f5f5f7; --surface: #ffffff; --surface-2: #f5f5f7; --line: rgba(0,0,0,.08); --line-strong: rgba(0,0,0,.15);
-    --text: #1d1d1f; --muted: #6e6e73; --nav-bg: rgba(255,255,255,.75);
-    --accent: #e84142; --accent-hover: #d2363a; --on-accent: #fff;
-    --ok: #1a7f37; --ok-soft: #e8f6ed; --on-ok: #fff;
-    --warn: #a35200; --warn-soft: #fff4e5;
-    --err: #d70015; --err-soft: #ffeef0;
-    --info: #0066cc; --info-soft: #e8f1fc;
-    --violet: #6e3ff3; --violet-soft: #f1ecff;
-    --teal: #0a6d74; --teal-soft: #e3f4f5;
-    --shadow: 0 1px 2px rgba(0,0,0,.04), 0 4px 20px rgba(0,0,0,.04);
-    --shadow-hover: 0 8px 28px rgba(0,0,0,.08);
-    --shadow-lg: 0 16px 48px rgba(0,0,0,.16);
-    --radius: 20px; --radius-md: 16px; --radius-sm: 12px;
+    color-scheme: dark;
+    --bg: #000; --surface: #131314; --surface-2: #1d1d1f; --tile: #212020;
+    --line: rgba(255,255,255,.08); --line-strong: rgba(255,255,255,.16);
+    --text: #fff; --soft: #c6cccd; --muted: #a2afb2;
+    --accent: #e84142; --accent-hover: #ff5455; --ok: #30d158;
+    --pad: max(16px, 1.6vw);
   }
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --bg: #000; --surface: #1c1c1e; --surface-2: #2c2c2e; --line: rgba(255,255,255,.1); --line-strong: rgba(255,255,255,.18);
-      --text: #f5f5f7; --muted: #98989d; --nav-bg: rgba(22,22,23,.75);
-      --accent: #ff453a; --accent-hover: #ff5d54;
-      --ok: #30d158; --ok-soft: rgba(48,209,88,.15); --on-ok: #00230b;
-      --warn: #ff9f0a; --warn-soft: rgba(255,159,10,.14);
-      --err: #ff453a; --err-soft: rgba(255,69,58,.15);
-      --info: #0a84ff; --info-soft: rgba(10,132,255,.16);
-      --violet: #bf5af2; --violet-soft: rgba(191,90,242,.16);
-      --teal: #64d2ff; --teal-soft: rgba(100,210,255,.14);
-      --shadow: 0 0 0 1px rgba(255,255,255,.02); --shadow-hover: 0 0 0 1px rgba(255,255,255,.08);
-      --shadow-lg: 0 16px 48px rgba(0,0,0,.6);
-    }
-  }
-
   * { box-sizing: border-box; }
-  html { -webkit-text-size-adjust: 100%; }
-  body {
-    margin: 0; background: var(--bg); color: var(--text);
-    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", Inter, system-ui, sans-serif;
-    font-size: 15px; line-height: 1.45; -webkit-font-smoothing: antialiased;
+  html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+  body { margin: 0; background: var(--bg); color: var(--text); font-family: Satoshi, system-ui, sans-serif; font-size: 17px; line-height: 1.5; -webkit-font-smoothing: antialiased; overflow-x: hidden; }
+  a { color: inherit; text-decoration: none; }
+  .mono { font-family: "JetBrains Mono", ui-monospace, monospace; font-size: .8em; letter-spacing: -.01em; }
+  .container { padding: 0 var(--pad); }
+  .eyebrow { display: inline-flex; align-items: center; gap: 10px; font-size: 13px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--soft); }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 0 4px rgba(48,209,88,.16); animation: pulse 2.4s ease-in-out infinite; }
+  @keyframes pulse { 50% { box-shadow: 0 0 0 7px rgba(48,209,88,.04); } }
+  .display { font-weight: 900; text-transform: uppercase; line-height: .82; letter-spacing: -.01em; margin: 0; }
+  .h2 { font-size: clamp(36px, 5.4vw, 72px); color: var(--soft); }
+  .red { color: var(--accent); }
+  .lead { color: var(--muted); font-size: clamp(17px, 1.4vw, 20px); max-width: 560px; }
+  section { position: relative; }
+  .sec { padding: clamp(80px, 12vw, 160px) 0; }
+
+  /* Buttons: square with an arrow, Avalanche style */
+  .btns { display: flex; gap: 12px; flex-wrap: wrap; }
+  .btn { position: relative; display: inline-flex; align-items: center; justify-content: space-between; gap: 48px; min-height: 56px; padding: 0 22px 0 24px; font-size: 15px; font-weight: 600; background: var(--tile); color: var(--text); border-left: 3px solid var(--accent); overflow: hidden; transition: background .25s; }
+  .btn.primary { background: var(--accent); border-left-color: var(--accent); }
+  .btn .arr { transition: transform .3s cubic-bezier(.2,.8,.2,1); }
+  .btn:hover .arr { transform: translateX(6px); }
+  .btn:hover { background: #2c2b2b; }
+  .btn.primary:hover { background: var(--accent-hover); }
+  .btn:focus-visible { outline: 2px solid var(--text); outline-offset: 3px; }
+
+  /* Nav */
+  .nav { position: fixed; inset: 0 0 auto; z-index: 50; background: #1d1d1d; }
+  .nav-inner { display: flex; align-items: center; justify-content: space-between; gap: 16px; height: 66px; }
+  /* Logo: P/D mark (stem + two chevrons) and a lowercase wordmark, shown like avalanche.com's */
+  .brand { display: flex; align-items: center; gap: 9px; color: #fff; }
+  .brand:hover { color: #fff; }
+  /* measured: nudging the mark 2.5px down puts its center on the word's center (the word's p and y hang below the baseline) */
+  .brand .mark { width: 29px; height: 24px; flex: none; transform: translateY(2.5px); }
+  .brand .word { font-size: 25px; font-weight: 700; letter-spacing: -.02em; line-height: 1; }
+  .nav-links { display: flex; align-items: center; gap: 28px; font-size: 15px; font-weight: 500; color: #fff; }
+  .nav-links a:not(.nav-cta) { opacity: .85; }
+  .nav-links a:hover { color: var(--text); }
+  .nav-cta { display: inline-flex; align-items: center; gap: 10px; height: 40px; padding: 0 16px; background: var(--accent); color: #fff !important; font-weight: 600; font-size: 14px; }
+  .nav-cta:hover { background: var(--accent-hover); }
+
+  /* Hero, laid out like avalanche.com: title and body top-left, proof points, then the buttons
+     at the bottom left with a label next to them, and a live card bottom right */
+  .hero { position: relative; min-height: min(100svh, 900px); display: flex; overflow: hidden; padding: calc(66px + clamp(24px, 5vh, 56px)) 0 clamp(20px, 4vh, 40px); }
+  #snow { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .hero::before { content: ""; position: absolute; inset: 0; background-image: linear-gradient(var(--line) 1px, transparent 1px), linear-gradient(90deg, var(--line) 1px, transparent 1px); background-size: 80px 80px; mask-image: radial-gradient(ellipse at 70% 30%, #000 10%, transparent 70%); -webkit-mask-image: radial-gradient(ellipse at 70% 30%, #000 10%, transparent 70%); opacity: .5; }
+  .hero::after { content: ""; position: absolute; width: 900px; height: 900px; right: -300px; top: -350px; background: radial-gradient(circle, rgba(232,65,66,.22), transparent 60%); pointer-events: none; }
+  /* grid: title spans the width; under it the text column (body, facts, buttons) and the live card side by side */
+  .hero-in { position: relative; z-index: 1; width: 100%; display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: auto 1fr; column-gap: 32px; }
+  .hero-in h1 { grid-column: 1 / -1; }
+  .hero-left { display: flex; flex-direction: column; }
+  .hero-in .live-card { align-self: end; }
+  .hero h1 { font-size: clamp(44px, min(10.5vw, 15vh), 176px); margin: 0; }
+  .hero h1 .line { display: block; overflow: hidden; padding-bottom: .04em; }
+  .hero h1 .line:nth-child(2) span { color: var(--soft); }
+  .hero .lead { margin: clamp(16px, 3vh, 28px) 0 0; color: var(--soft); max-width: 620px; font-size: clamp(16px, 1.25vw, 19px); }
+  /* proof points: small, in one row, left aligned */
+  .facts { list-style: none; display: flex; flex-wrap: wrap; gap: 10px 0; margin: clamp(18px, 3vh, 28px) 0 0; padding: 0; }
+  .facts li { font-size: 13px; color: var(--muted); padding: 0 18px; border-left: 1px solid var(--line-strong); line-height: 1.35; }
+  .facts li:first-child { padding-left: 0; border-left: 0; }
+  .facts b { display: block; color: var(--text); font-size: 11.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+  .hero-actions { display: flex; align-items: stretch; gap: 12px; flex-wrap: wrap; margin-top: auto; padding-top: clamp(24px, 5vh, 56px); }
+  .hero-actions .btn { min-width: clamp(220px, 20vw, 300px); min-height: 60px; }
+  .hero-tag { display: flex; align-items: center; padding-left: 18px; margin-left: 4px; border-left: 3px solid var(--accent); font-size: 15px; font-weight: 900; text-transform: uppercase; line-height: .95; color: var(--soft); }
+  /* live card, like avalanche.com's news card */
+  .live-card { width: min(340px, 100%); background: rgba(19,19,20,.88); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border-left: 3px solid var(--accent); padding: 20px 22px; }
+  .live-card .eyebrow { font-size: 11.5px; }
+  .lc-nums { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 16px 0 14px; }
+  .lc-nums b { display: block; font-size: 34px; font-weight: 900; line-height: 1; font-variant-numeric: tabular-nums; }
+  .lc-nums span { font-size: 11.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+  .live-card .mono { display: block; color: var(--soft); font-size: 12.5px; margin-bottom: 12px; }
+  .live-card a { font-size: 14px; font-weight: 600; color: var(--text); }
+  .live-card a span { color: var(--accent); transition: margin .3s; }
+  .live-card a:hover span { margin-left: 4px; }
+
+  /* Load animation, like avalanche.com: each line drops in from above inside its own clip,
+     later lines take longer; then the body, facts and buttons slide in, the card from the right */
+  .clip { display: block; overflow: hidden; }
+  .drop { display: block; animation: drop 1s cubic-bezier(.2,.6,.35,1) .2s both; }
+  .hero h1 .line:nth-child(2) .drop { animation-duration: 1.4s; }
+  .hero .lead.drop { animation-duration: 1.6s; animation-delay: .3s; }
+  .slide { display: flex; animation: slide 1s cubic-bezier(.2,.6,.35,1) .4s both; }
+  .facts .slide { display: block; animation-delay: .5s; }
+  .facts li + li .slide { animation-delay: .6s; } .facts li + li + li .slide { animation-delay: .7s; }
+  .hero-actions .clip:nth-child(2) .slide { animation-delay: .6s; }
+  .hero-tag.slide { animation-delay: .75s; }
+  .live-card.slide-r { animation: slide-r 1.1s cubic-bezier(.2,.6,.35,1) .5s both; }
+  @keyframes drop { from { transform: translateY(-105%); } }
+  @keyframes slide { from { transform: translateX(calc(-100% - 2px)); } }
+  @keyframes slide-r { from { transform: translateX(110%); opacity: 0; } }
+  @keyframes fade { from { opacity: 0; } }
+
+  /* Sponsor strip: white logos looping, like avalanche.com's partner strip */
+  .sponsors { padding: clamp(40px, 6vw, 72px) 0; border-bottom: 1px solid var(--line); overflow: hidden; }
+  .sp-head { margin-bottom: clamp(24px, 3vw, 40px); }
+  .marquee { -webkit-mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent); mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent); }
+  .track { display: flex; align-items: center; width: max-content; animation: loop 45s linear infinite; }
+  .marquee:hover .track { animation-play-state: paused; }
+  .sp { display: flex; align-items: center; height: 48px; margin-right: clamp(56px, 7vw, 112px); opacity: .78; transition: opacity .3s; }
+  .sp:hover { opacity: 1; }
+  .sp img { height: var(--h, 28px); width: auto; display: block; }
+  .sp .luma { display: flex; align-items: center; gap: 8px; font-size: 26px; font-weight: 700; letter-spacing: -.02em; color: #fff; }
+  .sp .luma img { height: 22px; }
+  @keyframes loop { to { transform: translateX(-50%); } }
+
+  /* Problem */
+  .split { display: grid; grid-template-columns: 1.3fr 1fr; gap: clamp(32px, 6vw, 96px); align-items: end; }
+  .split .lead { font-size: 19px; }
+
+  /* How it works: Avalanche-style cards. The open card grows, the rest shrink to strips. */
+  /* the section has no heading: the open card says "How it works" next to its number */
+  .acard .kicker { position: absolute; top: 38px; left: 92px; font-size: 13px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+  .acc-wrap { padding: 0 var(--pad); scroll-margin-top: 76px; }
+  .acc { --cw: 84px; --gap: 6px; display: flex; gap: var(--gap); height: clamp(560px, calc(100svh - 100px), 800px); max-width: 1920px; margin: 0 auto; }
+  .acard { position: relative; flex: 0 0 var(--cw); min-width: 0; background: var(--tile); border-radius: 22px; overflow: hidden; cursor: pointer; transition: flex-grow 1s cubic-bezier(.165,.84,.44,1), background-color .2s; }
+  .acard:not(.open):hover { background: #2a2929; }
+  .acard.open { flex-grow: 1; cursor: default; }
+  .acard .tabx { position: absolute; inset: 0; z-index: 2; width: 100%; background: none; border: 0; padding: 0; color: inherit; font: inherit; cursor: inherit; text-align: left; border-radius: 22px; }
+  .acard.open .tabx { pointer-events: none; }
+  .acard .tabx:focus-visible { outline: 2px solid var(--text); outline-offset: -4px; }
+  .acard .n { transition: left 1s cubic-bezier(.165,.84,.44,1); position: absolute; top: 36px; left: calc(var(--cw) / 2 - 12px); font-size: 20px; font-weight: 800; line-height: 1; }
+  .acard .tname { display: none; }
+  .go { position: absolute; bottom: 24px; left: calc(var(--cw) / 2 - 16px); width: 32px; height: 32px; border-radius: 50%; background: var(--accent); color: #fff; display: grid; place-items: center; font-size: 16px; transition: left 1s cubic-bezier(.165,.84,.44,1), background-color .2s, transform .3s; }
+  .acard:not(.open):hover .go { transform: scale(1.12); }
+  .acard.open .n { left: 40px; }
+  .acard.open .go { left: calc(100% - 64px); background: #000; pointer-events: auto; cursor: pointer; z-index: 3; }
+  .acard .bodyx { position: absolute; top: 0; left: 0; bottom: 0; width: var(--open-w, 900px); padding: clamp(96px, 14vh, 140px) clamp(40px, 4vw, 72px) 0 40px; opacity: 0; transition: opacity .35s; pointer-events: none; }
+  .acard.open .bodyx { opacity: 1; transition: opacity .6s .25s; pointer-events: auto; }
+  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 32px clamp(28px, 4vw, 80px); }
+  .cols h3 { font-size: clamp(36px, 4.4vw, 76px); color: var(--soft); }
+  .cols .who { display: inline-block; font-size: 12px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--text); padding: 4px 8px; border: 1px solid var(--line-strong); margin-bottom: 14px; }
+  .cols p { margin: 0; color: var(--muted); font-size: 17px; }
+
+  /* The invoice "ticket": shows what each step changes */
+  /* fixed width so rows never wrap; on smaller screens the whole ticket scales down like a picture */
+  .ticket { --ts: 1; position: absolute; right: clamp(48px, 5vw, 96px); bottom: -44px; width: 440px; transform-origin: 100% 100%; background: #0b0b0c; border: 1px solid var(--line-strong); border-radius: 14px; padding: 20px 22px 56px; box-shadow: 0 30px 80px rgba(0,0,0,.6); transform: translateY(40px) rotate(-2deg) scale(var(--ts)); transition: transform 1.1s cubic-bezier(.165,.84,.44,1) .15s; }
+  .acard.open .ticket { transform: rotate(-2deg) scale(var(--ts)); }
+  @media (max-width: 1400px) { .ticket { --ts: .84; } }
+  @media (max-width: 1180px) { .ticket { --ts: .72; } }
+  .t-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+  .t-head .mono { color: var(--muted); font-size: 12px; white-space: nowrap; }
+  .t-head .badge { white-space: nowrap; }
+  .badge { font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; padding: 4px 8px; border-radius: 4px; background: var(--line); color: var(--soft); }
+  .badge.c { background: rgba(100,168,255,.16); color: #64a8ff; } .badge.l { background: rgba(191,138,242,.16); color: #bf8af2; }
+  .badge.s { background: rgba(100,210,255,.14); color: #64d2ff; } .badge.p { background: rgba(48,209,88,.16); color: var(--ok); }
+  .t-amt { font-size: 32px; font-weight: 900; letter-spacing: -.02em; margin: 12px 0 0; line-height: 1; }
+  .t-amt small { font-size: 14px; font-weight: 600; color: var(--muted); letter-spacing: 0; margin-left: 6px; }
+  .t-amt span { font-size: 14px; font-weight: 500; color: var(--muted); letter-spacing: 0; margin-left: 4px; }
+  .t-rows { margin: 14px 0 0; display: grid; gap: 2px; }
+  .t-row { display: flex; justify-content: space-between; gap: 16px; padding: 7px 12px; font-size: 14px; border-left: 2px solid transparent; }
+  .t-row dt { color: var(--muted); } .t-row dd { margin: 0; font-weight: 600; text-align: right; }
+  .t-row.hi { background: rgba(232,65,66,.1); border-left-color: var(--accent); }
+  .t-row.hi dd { color: #fff; }
+  .t-row .muted { color: #5c6466; font-weight: 500; }
+
+  /* Why on-chain tiles */
+  .tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 56px; }
+  .tile { position: relative; background: var(--surface); border-radius: 18px; padding: 28px 24px 32px; min-height: 280px; display: flex; flex-direction: column; justify-content: space-between; gap: 24px; overflow: hidden; }
+  .tile::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--accent); transform: scaleY(.18); transform-origin: top; transition: transform .5s cubic-bezier(.2,.8,.2,1); }
+  .tile:hover::before { transform: none; }
+  .tile .k { font-size: 13px; font-weight: 700; color: var(--accent); letter-spacing: .08em; }
+  .tile h3 { margin: 0 0 12px; font-size: 26px; font-weight: 900; text-transform: uppercase; line-height: .95; }
+  .tile p { margin: 0; color: var(--muted); font-size: 15px; }
+
+  /* The math */
+  .math { display: grid; grid-template-columns: repeat(3, 1fr); margin-top: 56px; border-top: 1px solid var(--line-strong); }
+  .num { padding: 32px 24px 0 0; }
+  .num + .num { padding-left: 24px; border-left: 1px solid var(--line); }
+  .num .v { font-size: clamp(48px, 7vw, 96px); font-weight: 900; line-height: .9; letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
+  .num .l { margin-top: 14px; font-size: 13px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--soft); }
+  .num .d { margin-top: 6px; color: var(--muted); font-size: 15px; }
+  .calc { display: grid; grid-template-columns: 1fr 1fr; gap: 16px 48px; margin-top: 40px; }
+  .ctrl label { display: flex; justify-content: space-between; font-size: 13px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--soft); margin-bottom: 12px; }
+  .ctrl label b { color: var(--text); font-variant-numeric: tabular-nums; }
+  input[type=range] { width: 100%; accent-color: var(--accent); height: 28px; cursor: pointer; }
+
+  /* Live proof */
+  .proof { background: var(--surface); margin: 0 var(--pad); border-radius: 22px; }
+  .proof > .container { padding: 0 clamp(20px, 3vw, 48px); }
+  .proof-grid { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(32px, 6vw, 96px); align-items: end; }
+  .live { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 56px; }
+  .live .box { background: var(--tile); padding: 24px; border-radius: 14px; }
+  .live .v { font-size: clamp(40px, 5vw, 64px); font-weight: 900; line-height: 1; font-variant-numeric: tabular-nums; }
+  .live .l { margin-top: 10px; font-size: 13px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+  .contract { margin-top: 12px; display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; background: var(--tile); padding: 20px 24px; border-left: 3px solid var(--accent); border-radius: 14px; }
+  .contract .addr { font-size: 15px; word-break: break-all; }
+  .contract .tag { font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--ok); }
+  .contract a { font-weight: 600; color: var(--accent); white-space: nowrap; }
+  .contract a:hover { color: var(--accent-hover); }
+
+  /* Honest status */
+  .status { display: grid; grid-template-columns: 1fr 1.2fr; gap: clamp(32px, 6vw, 96px); }
+  .todo { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--line-strong); }
+  .todo li { display: flex; justify-content: space-between; gap: 16px; padding: 18px 0; border-bottom: 1px solid var(--line); font-size: 18px; font-weight: 600; }
+  .todo li span { color: var(--muted); font-size: 14px; font-weight: 500; text-align: right; }
+
+  /* CTA */
+  .cta { background: var(--accent); overflow: hidden; margin: 0 var(--pad); border-radius: 22px; }
+  .cta > .container { padding: 0 clamp(20px, 3vw, 48px); }
+  .cta .display { font-size: clamp(48px, 9vw, 140px); color: #fff; }
+  .cta .btn { background: #000; border-left-color: #000; }
+  .cta .btn:hover { background: #1a1a1a; }
+  .cta .btn.light { background: #fff; color: #000; border-left-color: #fff; }
+  .cta .btn.light:hover { background: #f0f0f0; }
+  .cta-row { display: flex; justify-content: space-between; align-items: flex-end; gap: 32px; flex-wrap: wrap; margin-top: 48px; }
+  .cta p { margin: 0; max-width: 460px; font-size: 19px; color: rgba(255,255,255,.88); }
+
+  footer { padding: 40px 0 48px; color: var(--muted); font-size: 14px; }
+  footer .container { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+  footer a:hover { color: var(--text); }
+
+  /* Reveal on scroll */
+  .reveal { opacity: 0; transform: translateY(32px); transition: opacity .9s cubic-bezier(.2,.8,.2,1), transform .9s cubic-bezier(.2,.8,.2,1); }
+  .reveal.in { opacity: 1; transform: none; }
+  .d1 { transition-delay: .08s; } .d2 { transition-delay: .16s; } .d3 { transition-delay: .24s; }
+
+  @media (max-width: 1140px) { .tiles { grid-template-columns: 1fr 1fr; } .tile { min-height: 220px; } }
+  @media (max-width: 960px) {
+    .nav-links a:not(.nav-cta) { display: none; }
+    .split, .proof-grid, .status { grid-template-columns: 1fr; }
+    /* cards stack vertically and open downwards */
+    .acc { flex-direction: column; height: auto; }
+    .acard { flex: none; border-radius: 16px; display: grid; grid-template-rows: 64px 0fr; transition: grid-template-rows .8s cubic-bezier(.165,.84,.44,1); }
+    .acard.open { grid-template-rows: 64px 1fr; }
+    .acard .tabx { position: static; grid-row: 1; display: flex; align-items: center; gap: 16px; padding: 0 18px; border-radius: 16px; }
+    .acard .n, .acard.open .n { position: static; font-size: 18px; }
+    .acard .tname { display: block; font-weight: 800; text-transform: uppercase; letter-spacing: .02em; flex: 1; }
+    .go, .acard.open .go { position: static; margin-left: auto; transition: transform .3s; }
+    .acard.open .go { transform: rotate(90deg); background: var(--accent); }
+    .acard .bodyx { position: static; grid-row: 2; width: auto; min-height: 0; overflow: hidden; padding: 0 18px; }
+    .acard.open .bodyx { padding-bottom: 0; }
+    .cols { grid-template-columns: 1fr; gap: 16px; padding-top: 4px; }
+    .acard .kicker { display: none; }
+    .ticket { position: relative; left: auto; right: auto; bottom: auto; width: auto; margin: 24px 0 -20px; transform: none; }
+    .acard.open .ticket { transform: none; }
+    .tiles { grid-template-columns: 1fr 1fr; }
   }
-  .mono { font-family: "SF Mono", "JetBrains Mono", ui-monospace, monospace; font-size: 12.5px; letter-spacing: -.01em; }
-  a { color: var(--info); text-decoration: none; } a:hover { text-decoration: underline; }
-  .hidden { display: none !important; }
-
-  /* Navigation bar: translucent, sticky (iOS) */
-  .nav { position: sticky; top: 0; z-index: 40; background: var(--nav-bg); backdrop-filter: saturate(180%) blur(20px); -webkit-backdrop-filter: saturate(180%) blur(20px); border-bottom: 1px solid var(--line); }
-  .nav-inner { max-width: 1120px; margin: 0 auto; padding: 10px 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
-  .brand { display: flex; align-items: center; gap: 10px; }
-  .logo { width: 34px; height: 34px; border-radius: 10px; background: var(--accent); color: #fff; display: grid; place-items: center; font-weight: 800; font-size: 17px; }
-  .brand-name { font-weight: 700; font-size: 17px; letter-spacing: -.02em; }
-  .brand-tag { font-size: 12px; color: var(--muted); }
-  .nav-right { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-  .chip { display: flex; align-items: center; gap: 8px; background: var(--surface); border: 1px solid var(--line); padding: 4px 4px 4px 14px; border-radius: 999px; min-height: 44px; box-shadow: var(--shadow); }
-  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); flex: none; }
-  .dot.on { background: var(--ok); box-shadow: 0 0 0 3px var(--ok-soft); }
-  #bal { color: var(--muted); }
-  #acctSelect { width: auto; min-height: 36px; font-size: 13px; background: transparent; border: 0; padding: 0 4px; }
-  #roleSelect { width: auto; min-height: 36px; font-size: 14px; font-weight: 600; background: transparent; border: 0; padding: 0 4px; }
-  .name-input { width: 110px; min-height: 32px; padding: 0 8px; font-size: 14px; background: transparent; border-color: transparent; }
-
-  /* Layout */
-  .wrap { max-width: 1120px; margin: 0 auto; padding: 0 16px 96px; }
-  .hero { padding: 44px 0 4px; }
-  .hero h1 { font-size: clamp(32px, 5.2vw, 52px); line-height: 1.04; letter-spacing: -.04em; margin: 0; font-weight: 700; }
-  .hero h1 span { color: var(--muted); }
-  .hero p { color: var(--muted); font-size: 17px; max-width: 580px; margin: 14px 0 0; }
-  .layout { display: grid; grid-template-columns: minmax(0, 380px) minmax(0, 1fr); gap: 20px; align-items: start; }
-  .duo { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; align-items: start; margin-bottom: 20px; }
-  .stack { display: flex; flex-direction: column; gap: 20px; }
-
-  /* Buttons: 44pt minimum touch target (Apple HIG) */
-  button { font: inherit; font-weight: 600; font-size: 15px; border: 0; border-radius: 999px; padding: 0 20px; min-height: 44px; cursor: pointer; background: var(--accent); color: var(--on-accent); display: inline-flex; align-items: center; justify-content: center; gap: 6px; white-space: nowrap; transition: background .15s, transform .1s, opacity .15s; }
-  button:hover { background: var(--accent-hover); }
-  button:active { transform: scale(.97); }
-  button.ghost { background: var(--surface); color: var(--text); border: 1px solid var(--line-strong); }
-  button.ghost:hover { background: var(--surface-2); }
-  button.ok { background: var(--ok); color: var(--on-ok); }
-  button.ok:hover { opacity: .9; background: var(--ok); }
-  button.small { min-height: 36px; padding: 0 16px; font-size: 14px; }
-  button.block { width: 100%; }
-  button:disabled { opacity: .35; cursor: not-allowed; transform: none; }
-  button:focus-visible, input:focus-visible, select:focus-visible { outline: none; box-shadow: 0 0 0 4px color-mix(in srgb, var(--info) 35%, transparent); }
-
-  /* Forms: 16px inputs stop iOS from zooming on focus */
-  input, select { font: inherit; font-size: 16px; color: var(--text); background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 0 14px; min-height: 48px; width: 100%; min-width: 0; transition: border-color .15s, background .15s; }
-  input:hover, select:hover { border-color: var(--line-strong); }
-  input:focus, select:focus { outline: none; border-color: var(--info); background: var(--surface); }
-  label { display: block; font-size: 13px; color: var(--muted); margin: 0 0 6px; font-weight: 500; }
-  .field { margin-bottom: 16px; }
-  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-  .due { display: flex; gap: 8px; } .due input, .due select { flex: 1; }
-
-  /* Mode bars */
-  .bar { margin: 24px 0 0; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-md); padding: 10px 10px 10px 16px; box-shadow: var(--shadow); }
-  .bar input { flex: 1; min-width: 220px; min-height: 40px; }
-  .bar .lbl { font-size: 13px; font-weight: 600; }
-  .demo-bar { background: var(--warn-soft); border-color: transparent; box-shadow: none; }
-  .demo-bar .pill { background: var(--warn); color: #fff; font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 999px; }
-  .demo-bar .txt { color: var(--text); font-size: 14px; flex: 1; min-width: 220px; }
-
-  /* Segmented control (iOS) */
-  .tabs { display: flex; width: fit-content; max-width: 100%; gap: 2px; padding: 3px; margin: 28px 0 20px; background: color-mix(in srgb, var(--text) 7%, transparent); border-radius: 12px; overflow-x: auto; }
-  .tab { background: transparent; color: var(--text); border-radius: 9px; min-height: 36px; padding: 0 18px; font-size: 14px; font-weight: 500; }
-  .tab:hover { background: transparent; opacity: .65; }
-  .tab.active { background: var(--surface); box-shadow: 0 1px 3px rgba(0,0,0,.12), 0 0 0 .5px rgba(0,0,0,.04); font-weight: 600; }
-  .tab.active:hover { opacity: 1; }
-
-  /* Cards */
-  .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 24px; box-shadow: var(--shadow); }
-  .card h2 { margin: 0; font-size: 19px; letter-spacing: -.02em; font-weight: 700; }
-  .card .sub { margin: 4px 0 20px; color: var(--muted); font-size: 14px; }
-  .fraud { background: var(--err-soft); border-color: transparent; box-shadow: none; }
-  .fraud h2 { color: var(--err); }
-
-  /* Invoice card */
-  .inv { border: 1px solid var(--line); border-radius: var(--radius-md); padding: 18px; margin-bottom: 12px; background: var(--surface); transition: box-shadow .2s, border-color .2s; }
-  .inv:last-child { margin-bottom: 0; }
-  .inv:hover { box-shadow: var(--shadow-hover); border-color: var(--line-strong); }
-  .inv-top { display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; }
-  .inv-title { font-weight: 600; font-size: 16px; letter-spacing: -.01em; }
-  .inv-sub { color: var(--muted); font-size: 13px; margin-top: 3px; }
-  .inv-amt { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; flex: none; }
-  .big { font-size: 24px; font-weight: 700; letter-spacing: -.03em; font-variant-numeric: tabular-nums; line-height: 1; }
-  .big small { font-size: 13px; color: var(--muted); font-weight: 500; margin-left: 4px; letter-spacing: 0; }
-  .steps { list-style: none; display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin: 18px 0 14px; padding: 0; }
-  .steps li { font-size: 12px; color: var(--muted); display: flex; flex-direction: column; gap: 6px; }
-  .steps li span { height: 4px; border-radius: 4px; background: var(--line-strong); }
-  .steps li.done { color: var(--text); font-weight: 600; }
-  .steps li.done span { background: var(--ok); }
-  .steps li.next span { background: linear-gradient(90deg, var(--info) 0 45%, var(--line-strong) 45%); }
-  .steps.overdue li.done span { background: var(--err); }
-  .inv-meta { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin: 0; padding: 14px 0 0; border-top: 1px solid var(--line); }
-  .inv-meta dt { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; font-weight: 600; }
-  .inv-meta dd { margin: 3px 0 0; font-size: 14px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .inv-actions { display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap; align-items: center; }
-  .inv-actions input { width: 120px; min-height: 36px; font-size: 14px; }
-  .badge { font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 999px; white-space: nowrap; }
-  .b-Created { background: var(--surface-2); color: var(--muted); }
-  .b-Confirmed { background: var(--info-soft); color: var(--info); }
-  .b-Listed { background: var(--violet-soft); color: var(--violet); }
-  .b-Sold { background: var(--teal-soft); color: var(--teal); }
-  .b-Paid { background: var(--ok-soft); color: var(--ok); }
-  .b-Overdue { background: var(--err-soft); color: var(--err); }
-  .yield { color: var(--ok); font-weight: 700; font-size: 15px; }
-  .empty { color: var(--muted); font-size: 14px; padding: 36px 16px; text-align: center; border: 1.5px dashed var(--line-strong); border-radius: var(--radius-md); }
-
-  /* Data */
-  .kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; margin-bottom: 20px; }
-  .kpi { padding: 20px; }
-  .kpi .k { color: var(--muted); font-size: 13px; font-weight: 500; }
-  .kpi .v { font-size: 34px; font-weight: 700; letter-spacing: -.035em; margin-top: 6px; font-variant-numeric: tabular-nums; line-height: 1.1; }
-  .table-wrap { overflow-x: auto; margin: 0 -8px; }
-  table { width: 100%; border-collapse: collapse; font-size: 14px; font-variant-numeric: tabular-nums; }
-  th, td { text-align: left; padding: 12px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
-  tr:last-child td { border-bottom: 0; }
-  th { color: var(--muted); font-size: 12px; font-weight: 600; }
-  .score { display: flex; align-items: center; gap: 10px; }
-  .meter { width: 72px; height: 6px; border-radius: 6px; background: var(--line-strong); overflow: hidden; }
-  .meter i { display: block; height: 100%; border-radius: 6px; }
-
-  /* Toasts: iOS-style banners from the top */
-  #toasts { position: fixed; top: 76px; left: 50%; transform: translateX(-50%); width: min(440px, calc(100% - 32px)); display: flex; flex-direction: column; gap: 8px; z-index: 60; pointer-events: none; }
-  .toast { pointer-events: auto; background: color-mix(in srgb, var(--surface) 92%, transparent); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); color: var(--text); border: 1px solid var(--line); border-radius: var(--radius-md); padding: 14px 16px; box-shadow: var(--shadow-lg); font-weight: 600; font-size: 14px; animation: in .35s cubic-bezier(.2, .9, .3, 1.15); }
-  .toast .t-sub { display: block; font-size: 12.5px; font-weight: 500; color: var(--muted); margin-top: 4px; }
-  .toast.err.big-err { background: var(--err); border-color: transparent; color: #fff; font-size: 17px; }
-  .toast.err.big-err .t-sub { color: #fff !important; opacity: .92; }
-  @keyframes in { from { transform: translateY(-14px) scale(.97); opacity: 0; } }
-
-  @media (max-width: 860px) {
-    .layout { grid-template-columns: 1fr; }
-    .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  @media (max-width: 640px) {
+    body { font-size: 16px; }
+    .math, .live, .calc { grid-template-columns: 1fr; }
+    .num + .num { padding-left: 0; border-left: 0; border-top: 1px solid var(--line); }
+    .facts { flex-direction: column; gap: 10px; }
+    .facts li { padding: 0 0 0 12px; border-left: 2px solid var(--line-strong); }
+    .facts li:first-child { padding-left: 12px; border-left: 2px solid var(--line-strong); }
+    .hero-actions, .hero-actions .clip { width: 100%; }
+    .hero-tag { display: none; }
+    .live-card { width: 100%; }
+    .hero-in { grid-template-columns: 1fr; row-gap: 24px; }
+    .num { padding: 24px 0; }
+    .tiles { grid-template-columns: 1fr; }
+    .tile { min-height: 0; }
+    .t-amt { font-size: 36px; }
+    .btn, .btns .clip { width: 100%; }
+    .hero { min-height: 0; }
+    .todo li { flex-direction: column; gap: 4px; }
+    .todo li span { text-align: left; }
   }
-  @media (max-width: 560px) {
-    .row { grid-template-columns: 1fr; }
-    .inv-meta { grid-template-columns: 1fr 1fr; }
-    .hero { padding-top: 28px; }
-    .brand-tag, #bal { display: none; }
-    .card { padding: 18px; }
-    .inv-actions button { flex: 1; }
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    *, *::before { animation: none !important; transition: none !important; }
+    .track { flex-wrap: wrap; width: auto; row-gap: 24px; } .sp[aria-hidden] { display: none; }
+    .reveal { opacity: 1; transform: none; }
   }
-  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
 </style>
 </head>
 <body>
-<header class="nav">
-  <div class="nav-inner">
-    <div class="brand">
-      <div class="logo">P</div>
-      <div>
-        <div class="brand-name">PayDay</div>
-        <div class="brand-tag">Invoice financing on Avalanche</div>
-      </div>
-    </div>
-    <div class="nav-right">
-      <div class="chip">
-        <span class="dot" id="dot"></span>
-        <select id="roleSelect" class="hidden" aria-label="Who are you in the demo?"></select>
-        <input class="name-input" id="myName" placeholder="Name wallet" aria-label="Name this wallet">
-        <span class="mono" id="addr">Not connected</span>
-        <select id="acctSelect" class="mono hidden" aria-label="Which of your wallets to act as"></select>
-        <span class="mono" id="bal"></span>
-        <button class="small" id="connectBtn">Connect wallet</button>
-      </div>
-      <button class="ghost small" id="demoBtn">🧪 Demo mode</button>
-    </div>
+
+<header class="nav" id="nav">
+  <div class="container nav-inner">
+    <a class="brand" href="#top" aria-label="PayDay home"><svg class="mark" viewBox="0 0 29 24" aria-hidden="true"><rect x="1" y="4" width="5.2" height="17.5" fill="#e84142"/><path d="M7.6 4h5.2l8 8-8 8H7.6l8-8z" fill="#e84142"/><path d="M15.4 4h5.2l8 8-8 8h-5.2l8-8z" fill="#e84142" opacity=".55"/></svg><span class="word">payday</span></a>
+    <nav class="nav-links">
+      <a href="#how">How it works</a>
+      <a href="#why">Why on-chain</a>
+      <a href="#proof">Live proof</a>
+      <a class="nav-cta" href="app.html">Launch app <span aria-hidden="true">→</span></a>
+    </nav>
   </div>
 </header>
 
-<main class="wrap">
+<main id="top">
+  <!-- HERO -->
   <section class="hero">
-    <h1>Get paid today.<br><span>Not in 90 days.</span></h1>
-    <p>Small businesses sell confirmed invoices to investors and get cash in seconds. When the client pays, the money goes to the invoice holder automatically.</p>
-  </section>
-
-  <div class="bar demo-bar hidden" id="demoBar">
-    <span class="pill">Demo mode</span>
-    <span class="txt">Simulated chain with the same rules as the real contract. No wallet needed. Switch who you are in the top right.</span>
-    <button class="ghost small" id="resetDemo">Reset demo data</button>
-  </div>
-
-  <div class="bar" id="liveBar">
-    <span class="lbl">Contract</span>
-    <input class="mono" id="contractInput" placeholder="Paste deployed PayDay contract address (0x…)" aria-label="Contract address">
-    <button class="small" id="saveContract">Use</button>
-    <a id="contractLink" target="_blank" rel="noopener"></a>
-  </div>
-
-  <nav class="tabs" role="tablist">
-    <button class="tab active" data-tab="business">Business</button>
-    <button class="tab" data-tab="client">Client</button>
-    <button class="tab" data-tab="investor">Investor</button>
-    <button class="tab" data-tab="board">Public board</button>
-  </nav>
-
-  <!-- BUSINESS -->
-  <section id="tab-business">
-    <div class="layout">
-      <div class="stack">
-        <div class="card">
-          <h2>New invoice</h2>
-          <p class="sub">You delivered the goods. Put the invoice on-chain.</p>
-          <div class="field"><label for="cClient">Client wallet</label><input class="mono" id="cClient" placeholder="0x… the company that owes you"></div>
-          <div class="row field">
-            <div><label for="cAmount">Amount (AVAX)</label><input id="cAmount" type="number" step="0.001" value="0.005" inputmode="decimal"></div>
-            <div><label for="cDue">Due in</label>
-              <div class="due"><input id="cDue" type="number" value="90" min="1" inputmode="numeric"><select id="cDueUnit" aria-label="Unit"><option value="86400">days</option><option value="60">minutes</option></select></div>
-            </div>
-          </div>
-          <div class="field"><label for="cRef">Invoice reference</label><input id="cRef" value="INV-2026-001 · Bread supply · Pekara Prilep"></div>
-          <button class="block" id="createBtn">Create invoice</button>
-        </div>
-        <div class="card fraud">
-          <h2>Fraud test</h2>
-          <p class="sub">The classic factoring fraud: selling the same invoice twice. Try it.</p>
-          <div class="row field">
-            <div><label for="fId">Invoice #</label><input id="fId" type="number" value="1" min="1" inputmode="numeric"></div>
-            <div><label for="fPrice">Price (AVAX)</label><input id="fPrice" type="number" step="any" value="0.00485" inputmode="decimal"></div>
-          </div>
-          <button class="block" id="fraudBtn">Try to sell it again</button>
+    <canvas id="snow" aria-hidden="true"></canvas>
+    <div class="container hero-in">
+      <h1 class="display"><span class="line clip red"><span class="drop">Get paid today.</span></span><span class="line clip"><span class="drop">Not in 90 days.</span></span></h1>
+      <div class="hero-left">
+        <div class="clip"><p class="lead drop">PayDay lets a small business sell a confirmed invoice to an investor and get cash as soon as it sells. When the client pays, the money goes to the investor automatically. One smart contract on Avalanche.</p></div>
+        <ul class="facts">
+          <li class="clip"><span class="slide"><b>Hackathon winner</b>Revoluchain, Prilep 2026</span></li>
+          <li class="clip"><span class="slide"><b>Tested with Foundry</b>42 tests · 100% coverage</span></li>
+          <li class="clip"><span class="slide"><b>Verified source</b>Readable on Snowtrace</span></li>
+        </ul>
+        <div class="hero-actions">
+          <span class="clip"><a class="btn slide" href="app.html?demo">Try the demo <span class="arr" aria-hidden="true">→</span></a></span>
+          <span class="clip"><a class="btn primary slide" href="app.html">Launch app <span class="arr" aria-hidden="true">→</span></a></span>
+          <span class="clip"><span class="hero-tag slide">Built on<br>Avalanche</span></span>
         </div>
       </div>
-      <div class="card">
-        <h2>Your invoices</h2>
-        <p class="sub">Once the client confirms, sell it to get cash now.</p>
-        <div id="bizList"></div>
+      <aside class="live-card slide-r" aria-label="Live contract">
+          <span class="eyebrow"><span class="dot"></span>Live on Avalanche Fuji</span>
+          <div class="lc-nums">
+            <div><b id="lcInv">·</b><span>Invoices on-chain</span></div>
+            <div><b id="lcOn">·</b><span>Paid on time</span></div>
+          </div>
+          <span class="mono" id="lcAddr"></span>
+          <a id="lcLink" target="_blank" rel="noopener">View contract on Snowtrace <span>→</span></a>
+      </aside>
+    </div>
+  </section>
+
+  <!-- SPONSORS: the Revoluchain hackathon sponsors (not PayDay partners) -->
+  <section class="sponsors" aria-label="Revoluchain hackathon sponsors">
+    <div class="container sp-head"><span class="eyebrow">Built at the Revoluchain hackathon · Prilep 2026 · Thanks to the sponsors</span></div>
+    <div class="marquee">
+      <div class="track">
+          <a class="sp" href="https://www.avalanche.com/" target="_blank" rel="noopener"><img src="sponsors/avalanche.svg" alt="Avalanche"></a>
+          <a class="sp" href="https://www.team1.network/" target="_blank" rel="noopener"><img src="sponsors/team1.png" alt="team1"></a>
+          <a class="sp" href="https://www.trendtehnologii.mk/" target="_blank" rel="noopener"><img src="sponsors/trend-tehnologii.png" alt="Trend Tehnologii"></a>
+          <a class="sp" href="https://coworkingprilep.mk/" target="_blank" rel="noopener"><img src="sponsors/coworking-prilep.png" alt="Coworking Prilep"></a>
+          <a class="sp" href="https://luma.com/" target="_blank" rel="noopener"><span class="luma" aria-label="Luma"><img src="sponsors/luma-mark.svg" alt="">luma</span></a>
+          <a class="sp" href="https://zephyr.mk/" target="_blank" rel="noopener"><img src="sponsors/zephyr.svg" alt="Zephyr Angels"></a>
+          <a class="sp" href="https://kapital.mk/" target="_blank" rel="noopener"><img src="sponsors/kapital.png" alt="Kapital Finance"></a>
+          <a class="sp" href="https://cryptool.pro/" target="_blank" rel="noopener"><img src="sponsors/cryptool.png" alt="Cryptool"></a>
+          <a class="sp" href="https://www.avalanche.com/" target="_blank" rel="noopener" aria-hidden="true" tabindex="-1"><img src="sponsors/avalanche.svg" alt="Avalanche"></a>
+          <a class="sp" href="https://www.team1.network/" target="_blank" rel="noopener" aria-hidden="true" tabindex="-1"><img src="sponsors/team1.png" alt="team1"></a>
+          <a class="sp" href="https://www.trendtehnologii.mk/" target="_blank" rel="noopener" aria-hidden="true" tabindex="-1"><img src="sponsors/trend-tehnologii.png" alt="Trend Tehnologii"></a>
+          <a class="sp" href="https://coworkingprilep.mk/" target="_blank" rel="noopener" aria-hidden="true" tabindex="-1"><img src="sponsors/coworking-prilep.png" alt="Coworking Prilep"></a>
+          <a class="sp" href="https://luma.com/" target="_blank" rel="noopener" aria-hidden="true" tabindex="-1"><span class="luma"><img src="sponsors/luma-mark.svg" alt="">luma</span></a>
+          <a class="sp" href="https://zephyr.mk/" target="_blank" rel="noopener" aria-hidden="true" tabindex="-1"><img src="sponsors/zephyr.svg" alt="Zephyr Angels"></a>
+          <a class="sp" href="https://kapital.mk/" target="_blank" rel="noopener" aria-hidden="true" tabindex="-1"><img src="sponsors/kapital.png" alt="Kapital Finance"></a>
+          <a class="sp" href="https://cryptool.pro/" target="_blank" rel="noopener" aria-hidden="true" tabindex="-1"><img src="sponsors/cryptool.png" alt="Cryptool"></a>
       </div>
     </div>
   </section>
 
-  <!-- CLIENT -->
-  <section id="tab-client" class="hidden">
-    <div class="card">
-      <h2>Invoices addressed to you</h2>
-      <p class="sub">Confirm what you owe. On the due date, pay once, and the money goes to whoever holds the invoice.</p>
-      <div id="clientList"></div>
-    </div>
-  </section>
-
-  <!-- INVESTOR -->
-  <section id="tab-investor" class="hidden">
-    <div class="duo">
-      <div class="card">
-        <h2>Marketplace</h2>
-        <p class="sub">Invoices confirmed by the debtor, for sale at a discount.</p>
-        <div id="marketList"></div>
-      </div>
-      <div class="card">
-        <h2>Your portfolio</h2>
-        <p class="sub">Invoices you hold. You are paid automatically.</p>
-        <div id="portfolioList"></div>
+  <!-- PROBLEM -->
+  <section class="sec">
+    <div class="container split">
+      <h2 class="display h2 reveal">You did the work.<br><span class="red">The money comes in 90 days.</span></h2>
+      <div class="reveal d1">
+        <p class="lead">Small businesses deliver first and wait 30, 60, sometimes 90 days to get paid. Rent, salaries and suppliers don't wait.</p>
+        <p class="lead">Selling the invoice for cash, called factoring, fixes that. Today it means paperwork, slow approvals, and trusting that the invoice isn't fake or already sold to someone else.</p>
       </div>
     </div>
   </section>
 
-  <!-- BOARD -->
-  <section id="tab-board" class="hidden">
-    <div class="kpis">
-      <div class="card kpi"><div class="k">Invoices on-chain</div><div class="v" id="sCount">0</div></div>
-      <div class="card kpi"><div class="k">Financed (AVAX)</div><div class="v" id="sFinanced">0</div></div>
-      <div class="card kpi"><div class="k">Paid on time</div><div class="v" id="sOnTime" style="color:var(--ok)">0</div></div>
-      <div class="card kpi"><div class="k">Late or overdue</div><div class="v" id="sLate" style="color:var(--err)">0</div></div>
-    </div>
-    <div class="duo">
-      <div class="card">
-        <h2>Payer reputation</h2>
-        <p class="sub">Every client's payment record. Public and permanent.</p>
-        <div class="table-wrap"><table><thead><tr><th>Client</th><th>On time</th><th>Late</th><th>Overdue</th><th>Score</th></tr></thead><tbody id="repBody"></tbody></table></div>
-      </div>
-      <div class="card hidden" id="balCard">
-        <h2>Wallet balances</h2>
-        <p class="sub">Watch the money move between the parties.</p>
-        <div class="table-wrap"><table><thead><tr><th>Wallet</th><th>Role</th><th>Balance (AVAX)</th></tr></thead><tbody id="balBody"></tbody></table></div>
+  <!-- HOW IT WORKS -->
+  <section class="sec" id="how" style="padding-top:0">
+    <div class="acc-wrap"><div class="acc reveal" id="acc"></div></div>
+  </section>
+
+  <!-- WHY ON-CHAIN -->
+  <section class="sec" id="why" style="padding-top:0">
+    <div class="container">
+      <span class="eyebrow reveal">Why on-chain</span>
+      <h2 class="display h2 reveal" style="margin-top:20px">The rules are code.<br><span class="red">Not promises.</span></h2>
+      <div class="tiles">
+        <article class="tile reveal"><span class="k">01</span><div><h3>Confirmed by the client</h3><p>Only the client's own wallet can confirm a debt. No confirmation, no sale.</p></div></article>
+        <article class="tile reveal d1"><span class="k">02</span><div><h3>No double sale</h3><p>Every invoice has exactly one holder. Only that holder can sell it, and never to two buyers at once.</p></div></article>
+        <article class="tile reveal d2"><span class="k">03</span><div><h3>Proof that holds up</h3><p>The client's confirmation, the amount and the due date are public and can't be edited. If it doesn't pay, that record is evidence for a claim.</p></div></article>
+        <article class="tile reveal d3"><span class="k">04</span><div><h3>Public payer record</h3><p>Every payment is recorded as on time or late, in public. Investors see a client's record before they buy.</p></div></article>
       </div>
     </div>
-    <div class="card">
-      <h2>All invoices</h2>
-      <p class="sub">Every invoice and its current owner.</p>
-      <div class="table-wrap"><table><thead><tr><th>#</th><th>Reference</th><th>Issuer</th><th>Client</th><th>Holder</th><th>Amount</th><th>Due</th><th>Status</th></tr></thead><tbody id="allBody"></tbody></table></div>
+  </section>
+
+  <!-- THE MATH -->
+  <section class="sec" style="padding-top:0">
+    <div class="container">
+      <span class="eyebrow reveal">The math</span>
+      <h2 class="display h2 reveal" style="margin-top:20px">You set the price.<br><span class="red">Investors pick the deal.</span></h2>
+      <p class="lead reveal d1" style="margin-top:24px">The business sets the price. The bigger the discount and the shorter the wait, the better the deal for the investor. Try it.</p>
+      <div class="calc reveal">
+        <div class="ctrl">
+          <label for="disc">Discount <b id="discV"></b></label>
+          <input type="range" id="disc" min="1" max="20" step="0.5" value="4">
+        </div>
+        <div class="ctrl">
+          <label for="days">Days until the client pays <b id="daysV"></b></label>
+          <input type="range" id="days" min="15" max="180" step="5" value="90">
+        </div>
+      </div>
+      <div class="math">
+        <div class="num reveal"><div class="v">1,000</div><div class="l">Invoice face value</div><div class="d">What the client owes.</div></div>
+        <div class="num reveal d1"><div class="v red" id="cashV">960</div><div class="l">Business gets today</div><div class="d">Cash now instead of waiting.</div></div>
+        <div class="num reveal d2"><div class="v" id="yrV">17%</div><div class="l">Investor return, per year</div><div class="d" id="retD"></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- LIVE PROOF -->
+  <section class="sec proof" id="proof">
+    <div class="container">
+      <div class="proof-grid">
+        <div>
+          <span class="eyebrow reveal"><span class="dot"></span>Read live from Avalanche</span>
+          <h2 class="display h2 reveal" style="margin-top:20px">Not a mockup.<br><span class="red">It's running.</span></h2>
+        </div>
+        <p class="lead reveal d1">These numbers come straight from the contract on Avalanche Fuji, every time you load this page. Every invoice, sale and payment is a public transaction.</p>
+      </div>
+      <div class="live">
+        <div class="box reveal"><div class="v" data-count="invoices">0</div><div class="l">Invoices on-chain</div></div>
+        <div class="box reveal d1"><div class="v" data-count="financed">0</div><div class="l">Face value financed · AVAX</div></div>
+        <div class="box reveal d2"><div class="v" data-count="ontime">0</div><div class="l">Paid on time</div></div>
+      </div>
+      <div class="contract reveal">
+        <div>
+          <div class="tag">✓ Source verified</div>
+          <div class="addr mono" id="addr"></div>
+        </div>
+        <a id="addrLink" target="_blank" rel="noopener">View on Snowtrace ↗</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- HONEST STATUS -->
+  <section class="sec">
+    <div class="container status">
+      <div>
+        <span class="eyebrow reveal">Status</span>
+        <h2 class="display h2 reveal" style="margin-top:20px">Testnet<br><span class="red">prototype.</span></h2>
+        <p class="lead reveal d1" style="margin-top:24px">PayDay runs with test AVAX on Fuji. It isn't audited and isn't ready for real money. If a client never pays, the investor takes the loss, but keeps a confirmed, timestamped record of the debt to take to court. This is what comes before mainnet.</p>
+      </div>
+      <ul class="todo reveal d1">
+        <li>Verified companies <span>Registry check, signed wallet proof and a binding agreement. You see "Supermarket DOOEL ✓", not 0x…</span></li>
+        <li>The real invoice on-chain <span>A fingerprint of the actual signed invoice document</span></li>
+        <li>Investor agreement <span>The debt legally moves to the investor who buys it</span></li>
+        <li>Stablecoin payments <span>Price invoices in USDC, not AVAX</span></li>
+        <li>Private invoice data <span>Only a fingerprint on-chain</span></li>
+        <li>Emergency pause <span>Stop the contract if something breaks</span></li>
+        <li>Independent security audit <span>Before any real funds</span></li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="sec cta">
+    <div class="container">
+      <h2 class="display reveal">Try it in<br>two minutes.</h2>
+      <div class="cta-row">
+        <p class="reveal d1">Demo mode needs no wallet. Play the business, the client and the investor, with the same rules as the real contract.</p>
+        <div class="btns reveal d2">
+          <a class="btn light" href="app.html?demo">Try the demo <span class="arr" aria-hidden="true">→</span></a>
+          <a class="btn" href="app.html">Launch app <span class="arr" aria-hidden="true">→</span></a>
+        </div>
+      </div>
     </div>
   </section>
 </main>
-<div id="toasts" aria-live="polite"></div>
+
+<footer>
+  <div class="container">
+    <span>PayDay · built by David Mitreski in Prilep. An independent project on Avalanche.</span>
+    <a id="footLink" target="_blank" rel="noopener">Contract on Snowtrace ↗</a>
+  </div>
+</footer>
 
 <script>
-const FUJI = {
-  chainId: '0xa869',
-  chainName: 'Avalanche Fuji C-Chain',
-  nativeCurrency: { name: 'AVAX', symbol: 'AVAX', decimals: 18 },
-  rpcUrls: ['https://api.avax-test.network/ext/bc/C/rpc'],
-  blockExplorerUrls: ['https://testnet.snowtrace.io/'],
-};
+const CONTRACT = '0x9983d1f7aF8328a92cFb76cBeb12c7894D14D0Ed';
+const RPC = 'https://api.avax-test.network/ext/bc/C/rpc';
 const EXPLORER = 'https://testnet.snowtrace.io';
-const ABI = [
-  'function count() view returns (uint256)',
-  'function getInvoice(uint256 id) view returns (tuple(address issuer, address client, address holder, uint256 amount, uint256 price, uint64 dueDate, uint64 paidAt, bytes32 docHash, string ref, uint8 status))',
-  'function paidOnTime(address) view returns (uint256)',
-  'function paidLate(address) view returns (uint256)',
-  'function createInvoice(address client, uint256 amount, uint64 dueDate, string ref) returns (uint256)',
-  'function confirmInvoice(uint256 id)',
-  'function listForSale(uint256 id, uint256 price)',
-  'function buyInvoice(uint256 id) payable',
-  'function payInvoice(uint256 id) payable',
-  'event InvoiceSold(uint256 indexed id, address indexed from, address indexed to, uint256 price)',
-];
-const STATUS = ['Created', 'Confirmed', 'Listed', 'Sold', 'Paid'];
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-const readProvider = new ethers.JsonRpcProvider(FUJI.rpcUrls[0]);
-let signer = null, me = null, invoices = [], financedTotal = 0n, demo = false;
-let myAccounts = []; // wallets this site may use, from MetaMask
+document.getElementById('addr').textContent = CONTRACT;
+document.getElementById('addrLink').href = document.getElementById('footLink').href = `${EXPLORER}/address/${CONTRACT}`;
 
-// ---------- storage (per-viewer convenience only) ----------
-function load(key, fallback) { try { return JSON.parse(localStorage.getItem(key)) ?? fallback; } catch { return fallback; } }
-function save(key, value) { try { localStorage.setItem(key, JSON.stringify(value)); } catch {} }
-let names = load('payday.names', {});
-let contractAddr = new URLSearchParams(location.search).get('c') || load('payday.contract', '');
 
-// ---------- helpers ----------
-const $ = (id) => document.getElementById(id);
-const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const short = (a) => a ? a.slice(0, 6) + '…' + a.slice(-4) : '';
-const who = (a) => {
-  const n = (demo && DEMO_NAMES[a?.toLowerCase()]) || names[a?.toLowerCase()];
-  const mine = me && a?.toLowerCase() === me.toLowerCase() ? ' (you)' : '';
-  return esc(n ? n : short(a)) + mine;
-};
-const avax = (wei) => Number(ethers.formatEther(wei)).toLocaleString(undefined, { maximumFractionDigits: 6 });
-const same = (a, b) => a && b && a.toLowerCase() === b.toLowerCase();
-const now = () => Math.floor(Date.now() / 1000);
-const isOverdue = (inv) => inv.status !== 4 && now() > inv.dueDate;
-function dueText(inv) {
-  const d = inv.dueDate - now();
-  const date = new Date(inv.dueDate * 1000).toLocaleString();
-  if (inv.status === 4) return 'Paid ' + new Date(inv.paidAt * 1000).toLocaleString();
-  if (d < 0) return '⚠️ Overdue since ' + date;
-  if (d < 3600) return 'Due in ' + Math.ceil(d / 60) + ' min';
-  if (d < 86400) return 'Due in ' + Math.ceil(d / 3600) + ' h';
-  return 'Due in ' + Math.ceil(d / 86400) + ' days';
-}
-const STATUS_LABEL = ['Awaiting client', 'Confirmed', 'For sale', 'Financed', 'Paid'];
-function badge(inv) {
-  if (isOverdue(inv)) return '<span class="badge b-Overdue">Overdue</span>';
-  return `<span class="badge b-${STATUS[inv.status]}">${STATUS_LABEL[inv.status]}</span>`;
-}
-const STEPS = ['Issued', 'Confirmed', 'Financed', 'Paid'];
-function stepper(inv) {
-  const cur = inv.status === 4 ? 3 : inv.status === 3 ? 2 : inv.status >= 1 ? 1 : 0;
-  return `<ol class="steps${isOverdue(inv) ? ' overdue' : ''}">${STEPS.map((s, i) =>
-    `<li class="${i <= cur ? 'done' : ''}${i === cur + 1 ? ' next' : ''}"><span></span>${s}</li>`).join('')}</ol>`;
-}
-function txLink(hash) {
-  if (demo) return `<span class="mono">Simulated tx ${hash.slice(0, 18)}…</span>`;
-  return `<a href="${EXPLORER}/tx/${hash}" target="_blank" rel="noopener">View on Snowtrace ↗</a>`;
-}
+// reveal on scroll
+const io = new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } }), { threshold: .15 });
+document.querySelectorAll('.reveal').forEach((el) => io.observe(el));
 
-function toast(html, kind = 'info', ms = 7000) {
-  const el = document.createElement('div');
-  el.className = 'toast ' + kind;
-  el.innerHTML = html;
-  $('toasts').appendChild(el);
-  setTimeout(() => el.remove(), ms);
-  return el;
-}
-
-function reason(e) {
-  if (e?.code === 'ACTION_REJECTED' || e?.code === 4001) return 'Cancelled in wallet';
-  const raw = e?.reason || e?.revert?.args?.[0] || e?.info?.error?.data?.message || e?.info?.error?.message || e?.error?.message || e?.shortMessage || e?.message || 'Transaction failed';
-  return String(raw).replace(/^.*execution reverted:?\s*/i, '').replace(/^"|"$/g, '') || 'Transaction reverted';
-}
-
-async function send(label, makeTx) {
-  if (!demo && !contractAddr) return toast('Paste the contract address first', 'err');
-  try {
-    let c;
-    if (demo) c = simContract;
-    else {
-      if (!signer) await connect();
-      c = new ethers.Contract(contractAddr, ABI, signer);
-    }
-    const pending = toast(`⏳ ${esc(label)}… ${demo ? 'signing' : 'confirm in MetaMask'}`, 'info', 60000);
-    let tx;
-    try { tx = await makeTx(c); } finally { pending.remove(); }
-    const mining = toast(`⛓️ ${esc(label)} sent<span class="t-sub">${txLink(tx.hash)}</span>`, 'info', 60000);
-    await tx.wait();
-    mining.remove();
-    toast(`✅ ${esc(label)} confirmed ${demo ? 'on the simulated chain' : 'on Avalanche'}<span class="t-sub">${txLink(tx.hash)}</span>`, 'ok', 12000);
-    if (demo && sim.note) { toast(sim.note, 'ok', 12000); sim.note = null; }
-    await refresh();
-  } catch (e) {
-    console.error(e);
-    toast(`⛔ REJECTED BY THE CONTRACT<span class="t-sub" style="font-size:15px;color:#fca5a5">${esc(reason(e))}</span>`, 'err big-err', 12000);
-  }
-}
-
-// ---------- demo mode: in-browser simulation of the PayDay contract ----------
-const DEMO_ACTORS = [
-  { addr: '0xba4e000000000000000000000000000000000001', name: 'Pekara Prilep', role: 'Business', tab: 'business', icon: '🏭' },
-  { addr: '0xba4e000000000000000000000000000000000002', name: 'Vinarija Tikveš', role: 'Business', tab: 'business', icon: '🏭' },
-  { addr: '0xc11e000000000000000000000000000000000003', name: 'Market Plus', role: 'Client', tab: 'client', icon: '🏬' },
-  { addr: '0xc11e000000000000000000000000000000000004', name: 'Hotel Ohrid', role: 'Client', tab: 'client', icon: '🏬' },
-  { addr: '0x1a5e000000000000000000000000000000000005', name: 'Ana · Investor', role: 'Investor', tab: 'investor', icon: '💰' },
-];
-const DEMO_NAMES = Object.fromEntries(DEMO_ACTORS.map((a) => [a.addr, a.name]));
-const E = (x) => ethers.parseEther(String(x));
-const lc = (a) => String(a).toLowerCase();
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-let sim = null;
-
-// Demo starts empty: every invoice is created live during the pitch.
-function seedDemo() {
-  const [pekara, vino, market, hotel, ana] = DEMO_ACTORS.map((a) => a.addr);
-  sim = {
-    invoices: [],
-    onTime: {},
-    late: {},
-    balances: { [pekara]: E(1), [vino]: E(1.5), [market]: E(5), [hotel]: E(3), [ana]: E(10) },
-    financed: 0n,
-    note: null,
+// sponsor logos: same visual weight for every logo, whatever its shape
+document.querySelectorAll('.sp > img').forEach((img) => {
+  const fit = () => {
+    if (!img.naturalWidth) return;
+    const aspect = img.naturalWidth / img.naturalHeight;
+    img.style.setProperty('--h', Math.round(Math.min(38, Math.max(24, Math.sqrt(3600 / aspect)))) + 'px');
   };
-}
-
-function revert(msg) { const e = new Error(msg); e.reason = msg; throw e; }
-// Mimics a transaction: rules are checked first (like a revert), then a block "mines".
-function simTx(fn) {
-  return (async () => {
-    await sleep(500);
-    fn();
-    return { hash: ethers.hexlify(ethers.randomBytes(32)), wait: () => sleep(900) };
-  })();
-}
-function simGet(id) {
-  id = Number(id);
-  if (!(id > 0 && id <= sim.invoices.length)) revert('Invoice does not exist');
-  return sim.invoices[id - 1];
-}
-function simPay(from, to, value) {
-  from = lc(from); to = lc(to);
-  if ((sim.balances[from] ?? 0n) < value) revert('Insufficient AVAX balance');
-  sim.balances[from] -= value;
-  sim.balances[to] = (sim.balances[to] ?? 0n) + value;
-}
-const nameOf = (a) => DEMO_NAMES[lc(a)] || short(a);
-
-// Same rules and revert messages as PayDay.sol
-const simContract = {
-  count: async () => BigInt(sim.invoices.length),
-  getInvoice: async (id) => simGet(id),
-  paidOnTime: async (a) => BigInt(sim.onTime[lc(a)] || 0),
-  paidLate: async (a) => BigInt(sim.late[lc(a)] || 0),
-  createInvoice: (client, amount, dueDate, ref) => simTx(() => {
-    if (!ethers.isAddress(client) || same(client, me)) revert('Invalid client address');
-    if (amount <= 0n) revert('Amount must be greater than 0');
-    if (Number(dueDate) <= now()) revert('Due date must be in the future');
-    sim.invoices.push({ issuer: lc(me), client: lc(client), holder: lc(me), amount, price: 0n, dueDate: Number(dueDate), paidAt: 0, docHash: ethers.id(ref), ref, status: 0 });
-  }),
-  confirmInvoice: (id) => simTx(() => {
-    const inv = simGet(id);
-    if (!same(me, inv.client)) revert('Only the client can confirm this invoice');
-    if (inv.status !== 0) revert('Invoice already confirmed');
-    inv.status = 1;
-  }),
-  listForSale: (id, price) => simTx(() => {
-    const inv = simGet(id);
-    if (!same(me, inv.holder)) revert('Not the holder - this invoice was already sold');
-    if (inv.status !== 1 && inv.status !== 3) revert('Invoice must be confirmed by the client first');
-    if (price <= 0n || price > inv.amount) revert('Price must be between 0 and the face value');
-    inv.price = price;
-    inv.status = 2;
-  }),
-  buyInvoice: (id, opts) => simTx(() => {
-    const inv = simGet(id);
-    if (inv.status !== 2) revert('Invoice is not for sale');
-    if (same(me, inv.holder)) revert('You already hold this invoice');
-    if (same(me, inv.client)) revert('The client cannot buy its own debt');
-    if (opts.value !== inv.price) revert('Send exactly the listed price');
-    const seller = inv.holder;
-    simPay(me, seller, opts.value);
-    inv.holder = lc(me);
-    inv.status = 3;
-    sim.financed += opts.value;
-    sim.note = `💸 ${esc(nameOf(seller))} received ${avax(opts.value)} AVAX instantly`;
-  }),
-  payInvoice: (id, opts) => simTx(() => {
-    const inv = simGet(id);
-    if (!same(me, inv.client)) revert('Only the client can pay this invoice');
-    if (![1, 2, 3].includes(inv.status)) revert('Invoice is not payable');
-    if (opts.value !== inv.amount) revert('Send exactly the invoice amount');
-    simPay(me, inv.holder, opts.value);
-    const late = now() > inv.dueDate;
-    inv.status = 4;
-    inv.paidAt = now();
-    inv.price = 0n;
-    const book = late ? sim.late : sim.onTime;
-    book[lc(inv.client)] = (book[lc(inv.client)] || 0) + 1;
-    sim.note = `💸 ${esc(nameOf(inv.holder))} received ${avax(opts.value)} AVAX${late ? ' · recorded as LATE payment' : ' · recorded as on time'}`;
-  }),
-};
-
-function showTab(name) {
-  document.querySelectorAll('.tab').forEach((x) => x.classList.toggle('active', x.dataset.tab === name));
-  ['business', 'client', 'investor', 'board'].forEach((n) => $('tab-' + n).classList.toggle('hidden', n !== name));
-}
-
-function setDemo(on) {
-  demo = on;
-  if (on && !sim) seedDemo();
-  signer = null;
-  me = on ? DEMO_ACTORS[0].addr : null;
-  $('demoBtn').textContent = on ? '🔌 Switch to live (Fuji)' : '🧪 Demo mode';
-  $('demoBar').classList.toggle('hidden', !on);
-  $('liveBar').classList.toggle('hidden', on);
-  $('balCard').classList.toggle('hidden', !on);
-  ['connectBtn', 'myName', 'addr'].forEach((id) => $(id).classList.toggle('hidden', on));
-  myAccounts = [];
-  $('acctSelect').classList.add('hidden');
-  $('roleSelect').classList.toggle('hidden', !on);
-  $('dot').classList.toggle('on', on);
-  $('bal').textContent = '';
-  if (on) {
-    $('roleSelect').value = me;
-    $('cClient').value = DEMO_ACTORS[2].addr;
-    showTab('business');
-  } else {
-    $('addr').textContent = 'Not connected';
-    $('connectBtn').textContent = 'Connect wallet';
-    $('cClient').value = '';
-  }
-  invoices = [];
-  render();
-  refresh();
-}
-
-$('roleSelect').innerHTML = DEMO_ACTORS.map((a) => `<option value="${a.addr}">${a.icon} ${esc(a.name)} (${a.role})</option>`).join('');
-$('roleSelect').onchange = (e) => {
-  me = e.target.value;
-  showTab(DEMO_ACTORS.find((a) => a.addr === me).tab);
-  refresh();
-};
-$('demoBtn').onclick = () => setDemo(!demo);
-$('resetDemo').onclick = () => { seedDemo(); setDemo(true); toast('Demo data reset', 'ok', 3000); };
-
-// ---------- wallet ----------
-// pick = true opens MetaMask's account picker, so you can switch (and allow) accounts
-async function connect(pick = false) {
-  if (!window.ethereum) { toast('MetaMask not found. Install it, and open this page from http://localhost (not a file).', 'err'); throw new Error('no wallet'); }
-  if (pick) await window.ethereum.request({ method: 'wallet_requestPermissions', params: [{ eth_accounts: {} }] });
-  const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-  try {
-    await window.ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: FUJI.chainId }] });
-  } catch (e) {
-    if (e.code === 4902 || e?.data?.originalError?.code === 4902) {
-      await window.ethereum.request({ method: 'wallet_addEthereumChain', params: [FUJI] });
-    } else throw e;
-  }
-  myAccounts = accounts;
-  // MetaMask lists the active account first
-  await useAccount(accounts[0]);
-  $('dot').classList.add('on');
-  $('connectBtn').textContent = 'Add accounts';
-}
-// act as one of the accounts allowed for this site (transactions are sent from it)
-async function useAccount(addr) {
-  signer = await new ethers.BrowserProvider(window.ethereum).getSigner(addr);
-  me = await signer.getAddress();
-  $('addr').textContent = short(me);
-  $('myName').value = names[me.toLowerCase()] || '';
-  fillAccounts();
-  await refresh();
-}
-function fillAccounts() {
-  const many = myAccounts.length > 1;
-  $('addr').classList.toggle('hidden', many);
-  $('acctSelect').classList.toggle('hidden', !many);
-  $('acctSelect').innerHTML = myAccounts.map((a) => {
-    const n = names[a.toLowerCase()];
-    return `<option value="${a}">${n ? esc(n) + ' · ' : ''}${short(a)}</option>`;
-  }).join('');
-  $('acctSelect').value = myAccounts.find((a) => same(a, me)) || '';
-}
-$('acctSelect').onchange = (e) => useAccount(e.target.value).catch((err) => toast(esc(reason(err)), 'err'));
-if (window.ethereum) {
-  window.ethereum.on?.('accountsChanged', (accounts) => {
-    if (demo || !me) return;
-    if (!accounts.length) return setDemo(false); // site disconnected in MetaMask
-    connect().catch(() => {});
-  });
-  window.ethereum.on?.('chainChanged', () => { if (!demo) location.reload(); });
-}
-$('connectBtn').onclick = () => connect(!!me).catch((e) => toast(esc(reason(e)), 'err'));
-$('myName').onchange = (e) => {
-  if (!me) return;
-  names[me.toLowerCase()] = e.target.value.trim();
-  save('payday.names', names);
-  if (!demo) fillAccounts();
-  render();
-};
-
-// ---------- contract address ----------
-function setContract(addr) {
-  if (!ethers.isAddress(addr)) return toast('That is not a valid address', 'err');
-  contractAddr = ethers.getAddress(addr);
-  save('payday.contract', contractAddr);
-  $('contractInput').value = contractAddr;
-  $('contractLink').href = `${EXPLORER}/address/${contractAddr}`;
-  $('contractLink').textContent = 'Snowtrace ↗';
-  refresh();
-}
-$('saveContract').onclick = () => setContract($('contractInput').value.trim());
-
-// ---------- tabs ----------
-document.querySelectorAll('.tab').forEach((t) => t.onclick = () => showTab(t.dataset.tab));
-
-// ---------- actions ----------
-$('createBtn').onclick = () => {
-  const client = $('cClient').value.trim();
-  if (!ethers.isAddress(client)) return toast('Enter a valid client wallet address', 'err');
-  const amount = ethers.parseEther($('cAmount').value || '0');
-  const due = BigInt(now() + Number($('cDue').value) * Number($('cDueUnit').value));
-  send('Create invoice', (c) => c.createInvoice(client, amount, due, $('cRef').value.trim()));
-};
-$('fraudBtn').onclick = () => {
-  const id = BigInt($('fId').value);
-  const price = ethers.parseEther($('fPrice').value || '0');
-  send(`Re-sell invoice #${id}`, (c) => c.listForSale(id, price));
-};
-// delegated buttons inside rendered lists
-document.addEventListener('click', (e) => {
-  const b = e.target.closest('[data-act]');
-  if (!b) return;
-  const id = BigInt(b.dataset.id);
-  const inv = invoices.find((x) => x.id === Number(b.dataset.id));
-  switch (b.dataset.act) {
-    case 'confirm': return send(`Confirm invoice #${id}`, (c) => c.confirmInvoice(id));
-    case 'list': {
-      const v = document.querySelector(`#price-${id}`).value;
-      return send(`List invoice #${id}`, (c) => c.listForSale(id, ethers.parseEther(v || '0')));
-    }
-    case 'buy':
-      $('fId').value = String(id); // pre-fill the fraud test with the invoice just sold
-      return send(`Buy invoice #${id}`, (c) => c.buyInvoice(id, { value: inv.price }));
-    case 'pay': return send(`Pay invoice #${id}`, (c) => c.payInvoice(id, { value: inv.amount }));
-  }
+  img.complete ? fit() : img.addEventListener('load', fit);
 });
 
-// ---------- data ----------
-let refreshing = false;
-async function refresh() {
-  if ((!demo && !contractAddr) || refreshing) return;
-  refreshing = true;
+// how it works: one open card at a time, each with an invoice ticket showing what changed
+const STEPS = [
+  { name: 'Issue', who: 'Business', title: 'Put the invoice', red: 'on-chain.',
+    text: 'The business creates the invoice on Avalanche: amount, the client\'s wallet, the due date. It now exists in public and can\'t be quietly edited.',
+    badge: ['Awaiting client', ''], hi: 'issuer', client: '<span class="muted">Not confirmed</span>', price: '<span class="muted">Not for sale</span>', holder: 'Business', paid: '<span class="muted">Not yet</span>' },
+  { name: 'Confirm', who: 'Client', title: 'The client', red: 'signs for it.',
+    text: 'The client confirms the debt from its own wallet. Nobody else can. An invoice nobody confirmed can\'t be sold.',
+    badge: ['Confirmed', 'c'], hi: 'client', client: '✓ Confirmed by client', price: '<span class="muted">Not for sale</span>', holder: 'Business', paid: '<span class="muted">Not yet</span>' },
+  { name: 'List', who: 'Business', title: 'You set', red: 'the price.',
+    text: 'The business offers the invoice below face value and picks the discount. A bigger discount sells faster. Only the current holder can sell it, and never to two buyers.',
+    badge: ['For sale', 'l'], hi: 'price', client: '✓ Confirmed by client', price: '960 · 4% off', holder: 'Business', paid: '<span class="muted">Not yet</span>' },
+  { name: 'Buy', who: 'Investor', title: 'Cash today.', red: 'One transaction.',
+    text: 'An investor pays 960. The money goes to the business and the invoice goes to the investor in the same transaction. Both happen, or neither does.',
+    badge: ['Financed', 's'], hi: 'holder', client: '✓ Confirmed by client', price: 'Sold for 960', holder: 'Investor', paid: '<span class="muted">Not yet</span>' },
+  { name: 'Pay', who: 'Client', title: 'The client pays.', red: 'The investor gets it.',
+    text: 'On the due date the client pays 1,000. The contract sends it to whoever holds the invoice and records if it was on time.',
+    badge: ['Paid', 'p'], hi: 'paid', client: '✓ Confirmed by client', price: 'Sold for 960', holder: 'Investor', paid: '✓ 1,000 · on time' },
+];
+(function cards() {
+  const acc = document.getElementById('acc');
+  const row = (k, label, v, st) => `<div class="t-row${st.hi === k ? ' hi' : ''}"><dt>${label}</dt><dd>${v}</dd></div>`;
+  acc.innerHTML = STEPS.map((st, i) => `
+    <article class="acard${i === 0 ? ' open' : ''}" data-i="${i}">
+      <button class="tabx" aria-expanded="${i === 0}" aria-controls="step-${i}"><span class="n">0${i + 1}</span><span class="tname">${st.name}</span><span class="go" aria-hidden="true">→</span></button>
+      <div class="bodyx" id="step-${i}">
+        <span class="kicker">How it works · ${st.name}</span>
+        <div class="cols">
+          <h3 class="display">${st.title}<br><span class="red">${st.red}</span></h3>
+          <div><span class="who">${st.who}</span><p>${st.text}</p></div>
+        </div>
+        <dl class="ticket">
+          <div class="t-head"><span class="mono">INVOICE · INV-001</span><span class="badge ${st.badge[1]}">${st.badge[0]}</span></div>
+          <div class="t-amt">1,000<small>face value</small><span>· due in 90 days</span></div>
+          <div class="t-rows">
+            ${row('issuer', 'Issued by', 'Business', st)}
+            ${row('client', 'Client', st.client, st)}
+            ${row('price', 'Price', st.price, st)}
+            ${row('holder', 'Pays out to', st.holder, st)}
+            ${row('paid', 'Payment', st.paid, st)}
+          </div>
+        </dl>
+      </div>
+    </article>`).join('');
+  const all = [...acc.children];
+  const open = (i) => all.forEach((c, k) => {
+    c.classList.toggle('open', k === i);
+    c.querySelector('.tabx').setAttribute('aria-expanded', k === i);
+  });
+  all.forEach((c, i) => {
+    c.querySelector('.tabx').onclick = () => open(i);
+    // the black arrow on the open card goes to the next step
+    c.querySelector('.go').onclick = (e) => { if (c.classList.contains('open')) { e.stopPropagation(); open((i + 1) % all.length); } };
+  });
+  // content inside each card keeps the open width, so it slides into view as the card grows
+  const size = () => {
+    // strip width scales with the screen, like avalanche.com (about 8% of the width)
+    const cw = Math.round(Math.min(150, Math.max(72, innerWidth * 0.08))), gap = 6;
+    acc.style.setProperty('--cw', cw + 'px');
+    acc.style.setProperty('--open-w', (acc.clientWidth - (all.length - 1) * (cw + gap)) + 'px');
+  };
+  addEventListener('resize', size); size();
+})();
+
+// snow drifting across the hero
+(function snow() {
+  const c = document.getElementById('snow'), ctx = c.getContext('2d');
+  let w, h, flakes = [], mx = 0;
+  const resize = () => {
+    const dpr = Math.min(devicePixelRatio || 1, 2);
+    w = c.clientWidth; h = c.clientHeight;
+    c.width = w * dpr; c.height = h * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    flakes = Array.from({ length: Math.round(w * h / 9000) }, () => ({ x: Math.random() * w, y: Math.random() * h, r: Math.random() * 1.6 + .3, s: Math.random() * .6 + .2, o: Math.random() * .5 + .15 }));
+  };
+  const draw = () => {
+    ctx.clearRect(0, 0, w, h);
+    for (const f of flakes) {
+      ctx.globalAlpha = f.o; ctx.fillStyle = '#fff';
+      ctx.beginPath(); ctx.arc(f.x, f.y, f.r, 0, 7); ctx.fill();
+      if (reduce) continue;
+      f.y += f.s; f.x += f.s * .5 + mx * f.r * .3;
+      if (f.y > h) { f.y = -4; f.x = Math.random() * w; }
+      if (f.x > w) f.x = 0; else if (f.x < 0) f.x = w;
+    }
+    if (!reduce) requestAnimationFrame(draw);
+  };
+  addEventListener('resize', resize);
+  addEventListener('pointermove', (e) => { mx = (e.clientX / innerWidth - .5) * 2; }, { passive: true });
+  resize(); draw();
+})();
+
+// the math: the business picks the discount, the investor's yearly return follows
+(function calc() {
+  const disc = document.getElementById('disc'), days = document.getElementById('days');
+  const set = (id, t) => document.getElementById(id).textContent = t;
+  const update = () => {
+    const d = Number(disc.value) / 100, n = Number(days.value);
+    const cash = 1000 * (1 - d), ret = d / (1 - d), yr = ret * 365 / n;
+    set('discV', disc.value + '%'); set('daysV', n);
+    set('cashV', Math.round(cash).toLocaleString());
+    set('yrV', Math.round(yr * 100) + '%');
+    set('retD', `Pays ${Math.round(cash).toLocaleString()}, receives 1,000 in ${n} days: +${(ret * 100).toFixed(1)}%.`);
+  };
+  disc.oninput = days.oninput = update; update();
+})();
+
+// live numbers read straight from the contract
+function countUp(el, to, decimals = 0) {
+  const fmt = (v) => v.toLocaleString(undefined, { maximumFractionDigits: decimals });
+  if (reduce) return el.textContent = fmt(to);
+  const t0 = performance.now(), dur = 1400;
+  const tick = (t) => {
+    const p = Math.min((t - t0) / dur, 1), e = 1 - Math.pow(1 - p, 3);
+    el.textContent = fmt(to * e);
+    if (p < 1) requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
+}
+async function loadLive() {
+  const abi = [
+    'function count() view returns (uint256)',
+    'function getInvoice(uint256 id) view returns (tuple(address issuer, address client, address holder, uint256 amount, uint256 price, uint64 dueDate, uint64 paidAt, bytes32 docHash, string ref, uint8 status))',
+    'function paidOnTime(address) view returns (uint256)',
+  ];
+  const c = new ethers.Contract(CONTRACT, abi, new ethers.JsonRpcProvider(RPC));
+  const n = Number(await c.count());
+  const list = await Promise.all(Array.from({ length: n }, (_, i) => c.getInvoice(i + 1)));
+  const clients = [...new Set(list.map((x) => x.client.toLowerCase()))];
+  const onTime = (await Promise.all(clients.map((a) => c.paidOnTime(a)))).reduce((s, v) => s + Number(v), 0);
+  // face value of invoices an investor bought (the holder is no longer the issuer)
+  const financed = list.filter((x) => x.holder.toLowerCase() !== x.issuer.toLowerCase())
+    .reduce((s, x) => s + Number(ethers.formatEther(x.amount)), 0);
+  return { invoices: n, financed, ontime: onTime };
+}
+// read the contract once (after ethers loads); the hero card and the proof section share it
+let liveData;
+const getLive = () => liveData || (liveData = loadLive());
+document.getElementById('lcAddr').textContent = CONTRACT.slice(0, 10) + '…' + CONTRACT.slice(-8);
+document.getElementById('lcLink').href = `${EXPLORER}/address/${CONTRACT}`;
+addEventListener('load', () => getLive().then((d) => {
+  document.getElementById('lcInv').textContent = d.invoices;
+  document.getElementById('lcOn').textContent = d.ontime;
+}).catch(() => {}));
+const liveBoxes = document.querySelector('.live');
+const liveIo = new IntersectionObserver(async ([e]) => {
+  if (!e.isIntersecting) return;
+  liveIo.disconnect();
   try {
-    const c = demo ? simContract : new ethers.Contract(contractAddr, ABI, readProvider);
-    const n = Number(await c.count());
-    const list = await Promise.all(Array.from({ length: n }, (_, i) => c.getInvoice(i + 1)));
-    invoices = list.map((r, i) => ({
-      id: i + 1, issuer: r.issuer, client: r.client, holder: r.holder,
-      amount: r.amount, price: r.price, dueDate: Number(r.dueDate), paidAt: Number(r.paidAt),
-      docHash: r.docHash, ref: r.ref, status: Number(r.status),
-    }));
-    const clients = [...new Set(invoices.map((x) => x.client.toLowerCase()))];
-    const rep = await Promise.all(clients.map(async (a) => [a, Number(await c.paidOnTime(a)), Number(await c.paidLate(a))]));
-    window.__rep = rep;
-    // money paid by investors to sellers (from Sold events)
-    if (demo) financedTotal = sim.financed;
-    else try {
-      const logs = await c.queryFilter(c.filters.InvoiceSold(), -2000);
-      financedTotal = logs.reduce((s, l) => s + (l.args?.price ?? 0n), 0n);
-    } catch { /* events optional */ }
-    if (me) $('bal').textContent = avax(demo ? (sim.balances[lc(me)] ?? 0n) : await readProvider.getBalance(me)) + ' AVAX';
-    render();
-  } catch (e) {
-    console.error(e);
-    toast('Could not read the contract. Is the address right and deployed on Fuji?', 'err');
-  } finally { refreshing = false; }
-}
-
-function invCard(inv, actions = '') {
-  return `<article class="inv">
-    <div class="inv-top">
-      <div>
-        <div class="inv-title">${esc(inv.ref || 'Invoice')}</div>
-        <div class="inv-sub">Invoice #${inv.id} · ${dueText(inv)}</div>
-      </div>
-      <div class="inv-amt">
-        <div class="big">${avax(inv.amount)}<small>AVAX</small></div>
-        ${badge(inv)}
-      </div>
-    </div>
-    ${stepper(inv)}
-    <dl class="inv-meta">
-      <div><dt>From</dt><dd>${who(inv.issuer)}</dd></div>
-      <div><dt>Owed by</dt><dd>${who(inv.client)}</dd></div>
-      <div><dt>Pays out to</dt><dd>${who(inv.holder)}</dd></div>
-      <div><dt>Document</dt><dd class="mono" title="keccak256 fingerprint of the invoice document">${inv.docHash.slice(0, 10)}…</dd></div>
-    </dl>
-    ${actions ? `<div class="inv-actions">${actions}</div>` : ''}
-  </article>`;
-}
-const empty = (t) => `<div class="empty">${t}</div>`;
-
-function render() {
-  const mine = (a) => same(a, me);
-
-  // Business
-  const biz = invoices.filter((x) => mine(x.issuer)).reverse();
-  $('bizList').innerHTML = !me ? empty('Connect the business wallet') : biz.length ? biz.map((inv) => {
-    let a = '';
-    if (inv.status === 0) a = '<span style="color:var(--muted);font-size:13px">⏳ Waiting for the client to confirm</span>';
-    else if (mine(inv.holder) && (inv.status === 1 || inv.status === 3)) {
-      const suggested = ethers.formatEther(inv.amount * 97n / 100n);
-      a = `<input id="price-${inv.id}" type="number" step="any" value="${suggested}"><button class="small" data-act="list" data-id="${inv.id}">Sell for cash now</button>`;
-    } else if (inv.status === 2) a = `<span style="color:var(--muted);font-size:13px">On the market for ${avax(inv.price)} AVAX</span>`;
-    else if (inv.status === 3) a = `<span style="color:var(--ok);font-size:13px;font-weight:600">💸 Sold to ${who(inv.holder)}, cash received</span>`;
-    return invCard(inv, a);
-  }).join('') : empty('No invoices yet');
-
-  // Client
-  const cl = invoices.filter((x) => mine(x.client)).reverse();
-  $('clientList').innerHTML = !me ? empty('Connect the client wallet') : cl.length ? cl.map((inv) => {
-    let a = '';
-    if (inv.status === 0) a = `<button class="small" data-act="confirm" data-id="${inv.id}">✍️ Confirm I owe this</button>`;
-    else if (inv.status !== 4) a = `<button class="small ok" data-act="pay" data-id="${inv.id}">Pay ${avax(inv.amount)} AVAX</button><span style="color:var(--muted);font-size:13px">goes to ${who(inv.holder)}</span>`;
-    return invCard(inv, a);
-  }).join('') : empty('No invoices addressed to this wallet');
-
-  // Investor
-  const market = invoices.filter((x) => x.status === 2).reverse();
-  $('marketList').innerHTML = market.length ? market.map((inv) => {
-    const disc = Number(inv.amount - inv.price) / Number(inv.amount) * 100;
-    const days = Math.max((inv.dueDate - now()) / 86400, 0);
-    const r = (window.__rep || []).find(([a]) => same(a, inv.client));
-    const repTxt = r ? `${r[1]} on time · ${r[2]} late` : 'no history';
-    const a = `<button class="small ok" data-act="buy" data-id="${inv.id}" ${mine(inv.holder) || mine(inv.client) ? 'disabled' : ''}>Buy for ${avax(inv.price)} AVAX</button>
-      <span class="yield">+${disc.toFixed(1)}% in ${days < 1 ? '<1' : Math.ceil(days)} days</span>
-      <span style="color:var(--muted);font-size:13px">Payer record: ${repTxt}</span>`;
-    return invCard(inv, a);
-  }).join('') : '';
-  // Confirmed by the client but not listed yet: visible, not buyable
-  const upcoming = invoices.filter((x) => x.status === 1).reverse();
-  $('marketList').innerHTML += upcoming.map((inv) => invCard(inv,
-    `<button class="small" disabled>Not for sale yet</button><span style="color:var(--muted);font-size:13px">Confirmed by ${who(inv.client)}. Waiting for ${who(inv.holder)} to set a price.</span>`
-  )).join('');
-  if (!market.length && !upcoming.length) $('marketList').innerHTML = empty('Nothing for sale right now');
-
-  const port = invoices.filter((x) => mine(x.holder) && !mine(x.issuer)).reverse();
-  $('portfolioList').innerHTML = !me ? empty('Connect the investor wallet') : port.length ? port.map((inv) => invCard(inv,
-    inv.status === 4 ? '<span style="color:var(--ok);font-weight:600">✅ Paid, the money is in your wallet</span>' : `<span style="color:var(--muted);font-size:13px">You will receive ${avax(inv.amount)} AVAX when the client pays</span>`
-  )).join('') : empty('You hold no invoices yet');
-
-  // Board
-  if (demo) $('balBody').innerHTML = DEMO_ACTORS.map((a) =>
-    `<tr><td>${a.icon} ${esc(a.name)}${same(a.addr, me) ? ' (you)' : ''}</td><td>${a.role}</td><td class="mono">${avax(sim.balances[a.addr] ?? 0n)}</td></tr>`).join('');
-  $('sCount').textContent = invoices.length;
-  $('sFinanced').textContent = avax(financedTotal);
-  const rep = window.__rep || [];
-  $('sOnTime').textContent = rep.reduce((s, r) => s + r[1], 0);
-  $('sLate').textContent = rep.reduce((s, r) => s + r[2], 0) + invoices.filter(isOverdue).length;
-  $('repBody').innerHTML = rep.length ? rep.map(([a, on, late]) => {
-    const overdue = invoices.filter((x) => same(x.client, a) && isOverdue(x)).length;
-    const total = on + late + overdue;
-    const score = total ? Math.round(on / total * 100) : null;
-    const color = score === null ? 'var(--muted)' : score >= 80 ? 'var(--ok)' : score >= 50 ? 'var(--warn)' : 'var(--err)';
-    return `<tr><td>${who(a)}</td><td>${on}</td><td>${late}</td><td>${overdue}</td><td><div class="score"><div class="meter"><i style="width:${score ?? 0}%;background:${color}"></i></div><b style="color:${color}">${score === null ? 'n/a' : score + '%'}</b></div></td></tr>`;
-  }).join('') : '<tr><td colspan="5" style="color:var(--muted)">No clients yet</td></tr>';
-  $('allBody').innerHTML = invoices.length ? invoices.slice().reverse().map((inv) => `<tr>
-    <td>${inv.id}</td><td>${esc(inv.ref)}</td><td>${who(inv.issuer)}</td><td>${who(inv.client)}</td><td>${who(inv.holder)}</td>
-    <td>${avax(inv.amount)}</td><td>${dueText(inv)}</td><td>${badge(inv)}</td></tr>`).join('') : '<tr><td colspan="8" style="color:var(--muted)">No invoices yet</td></tr>';
-}
-
-// ---------- boot ----------
-if (new URLSearchParams(location.search).has('demo') || !contractAddr) setDemo(true);
-else setContract(contractAddr);
-setInterval(refresh, 8000);
+    const d = await getLive();
+    liveBoxes.querySelectorAll('[data-count]').forEach((el) => {
+      const k = el.dataset.count;
+      countUp(el, d[k], k === 'financed' && d[k] > 0 && d[k] < 1 ? 5 : 0);
+    });
+  } catch (err) {
+    console.error(err);
+    liveBoxes.querySelectorAll('[data-count]').forEach((el) => el.textContent = '·');
+  }
+}, { threshold: .3 });
+addEventListener('load', () => liveIo.observe(liveBoxes));
 </script>
 </body>
 </html>

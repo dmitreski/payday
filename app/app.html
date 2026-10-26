@@ -1,0 +1,972 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PayDay · App</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<meta name="description" content="Invoice financing on Avalanche. Create, confirm, sell and pay invoices on-chain.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://cdn.fontshare.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<!-- Satoshi (Fontshare, free for commercial use): closest free match to Avalanche's Aeonik -->
+<link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700,900&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/ethers@6.13.4/dist/ethers.umd.min.js"></script>
+<style>
+  /* Design tokens: dark, Avalanche-style (heavy uppercase type, red accent, square controls) */
+  :root {
+    color-scheme: dark;
+    --pad: max(16px, 1.6vw);
+    --bg: #000; --surface: #131314; --surface-2: #1d1d1f; --line: rgba(255,255,255,.08); --line-strong: rgba(255,255,255,.16);
+    --text: #fff; --muted: #a2afb2; --soft: #c6cccd; --nav-bg: rgba(0,0,0,.72);
+    --accent: #e84142; --accent-hover: #ff5455; --on-accent: #fff;
+    --ok: #30d158; --ok-soft: rgba(48,209,88,.14); --on-ok: #00230b;
+    --warn: #ff9f0a; --warn-soft: rgba(255,159,10,.12);
+    --err: #ff453a; --err-soft: rgba(232,65,66,.12);
+    --info: #64a8ff; --info-soft: rgba(100,168,255,.14);
+    --violet: #bf8af2; --violet-soft: rgba(191,138,242,.14);
+    --teal: #64d2ff; --teal-soft: rgba(100,210,255,.12);
+    --shadow: none; --shadow-hover: 0 0 0 1px rgba(255,255,255,.1);
+    --shadow-lg: 0 16px 48px rgba(0,0,0,.7);
+    --radius: 14px; --radius-md: 12px; --radius-sm: 6px;
+  }
+
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font-family: Satoshi, system-ui, sans-serif;
+    font-size: 15px; line-height: 1.45; -webkit-font-smoothing: antialiased;
+  }
+  .mono { font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 12.5px; letter-spacing: -.01em; }
+  a { color: var(--soft); text-decoration: none; } a:hover { color: var(--text); }
+  .hidden { display: none !important; }
+
+  /* Navigation bar */
+  .nav { position: sticky; top: 0; z-index: 40; background: #1d1d1d; }
+  .nav-inner { padding: 11px var(--pad); display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  /* Logo: P/D mark (stem + two chevrons) and a lowercase wordmark, shown like avalanche.com's */
+  .brand { display: flex; align-items: center; gap: 9px; color: #fff; }
+  .brand:hover { color: #fff; }
+  /* measured: nudging the mark 2.5px down puts its center on the word's center (the word's p and y hang below the baseline) */
+  .brand .mark { width: 29px; height: 24px; flex: none; transform: translateY(2.5px); }
+  .brand .word { font-size: 25px; font-weight: 700; letter-spacing: -.02em; line-height: 1; }
+  .nav-right { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .chip { display: flex; align-items: center; gap: 8px; background: var(--surface); border: 1px solid var(--line); padding: 3px 3px 3px 14px; border-radius: 8px; min-height: 44px; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); flex: none; }
+  .dot.on { background: var(--ok); box-shadow: 0 0 0 3px var(--ok-soft); }
+  /* balance sits in its own segment of the wallet chip, never against the edge */
+  #bal { color: var(--soft); font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; align-self: stretch; display: flex; align-items: center; padding: 0 12px; margin-left: 2px; border-left: 1px solid var(--line); white-space: nowrap; }
+  #bal:empty { display: none; }
+  #acctSelect { width: auto; min-height: 36px; font-size: 13px; background-color: transparent; border: 0; padding: 0 30px 0 4px; background-position: right 8px center; }
+  #roleSelect { width: auto; min-height: 36px; font-size: 14px; font-weight: 600; background-color: transparent; border: 0; padding: 0 30px 0 4px; background-position: right 8px center; }
+  .name-input { width: 104px; min-height: 32px; padding: 0 8px; font-size: 14px; background: transparent; border-color: transparent; }
+
+  /* Layout */
+  .wrap { padding: 0 var(--pad) 80px; }
+  .hero { padding: 22px 0 0; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 420px); gap: 24px; align-items: center; }
+  .hero h1 { font-size: clamp(30px, 4.2vw, 56px); line-height: .82; letter-spacing: -.01em; margin: 0; font-weight: 900; text-transform: uppercase; color: var(--accent); }
+  .hero h1 span { color: var(--soft); }
+  .hero p { color: var(--muted); font-size: 15px; max-width: 520px; margin: 12px 0 0; }
+  .layout { display: grid; grid-template-columns: minmax(0, 380px) minmax(0, 1fr); gap: 16px; align-items: start; }
+  .duo { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; align-items: start; margin-bottom: 16px; }
+  .stack { display: flex; flex-direction: column; gap: 16px; }
+
+  /* Contract card: built in, shown for transparency */
+  .net { background: var(--surface); border: 1px solid var(--line); border-left: 3px solid var(--accent); border-radius: 8px; padding: 14px 16px; display: grid; gap: 6px; }
+  .net-top { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--soft); }
+  .net-addr { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  .net-addr .mono { color: var(--text); font-size: 13px; }
+  .net-addr a { font-size: 13px; font-weight: 600; color: var(--accent); white-space: nowrap; }
+  .net-addr a:hover { color: var(--accent-hover); }
+  .net-note { font-size: 12.5px; color: var(--muted); }
+
+  /* Buttons: square, Avalanche style, 44px touch target */
+  button { font: inherit; font-weight: 600; font-size: 15px; border: 0; border-radius: var(--radius-sm); padding: 0 20px; min-height: 44px; cursor: pointer; background: var(--accent); color: var(--on-accent); display: inline-flex; align-items: center; justify-content: center; gap: 8px; white-space: nowrap; transition: background .15s, transform .1s, opacity .15s; }
+  button:hover { background: var(--accent-hover); }
+  button:active { transform: scale(.98); }
+  button.ghost { background: var(--surface-2); color: var(--text); border: 1px solid var(--line-strong); }
+  button.ghost:hover { background: #2a2a2d; }
+  button.ok { background: var(--ok); color: var(--on-ok); }
+  button.ok:hover { opacity: .9; background: var(--ok); }
+  button.small { min-height: 36px; padding: 0 14px; font-size: 14px; }
+  button.block { width: 100%; }
+  button:disabled { opacity: .35; cursor: not-allowed; transform: none; }
+  button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible { outline: none; box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 55%, transparent); }
+
+  /* Forms: 16px inputs stop iOS from zooming on focus */
+  input, select { font: inherit; font-size: 16px; color: var(--text); background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 0 12px; min-height: 44px; width: 100%; min-width: 0; transition: border-color .15s, background .15s; }
+  input:hover, select:hover { border-color: var(--line-strong); }
+  input:focus, select:focus { outline: none; border-color: var(--accent); }
+  label { display: block; font-size: 12px; color: var(--muted); margin: 0 0 6px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; }
+  .field { margin-bottom: 12px; }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  /* our own chevron, 14px in from the edge (the browser's default hugs the border) */
+  select { -webkit-appearance: none; appearance: none; padding-right: 40px; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5l5 5 5-5' fill='none' stroke='%23c6cccd' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; background-size: 12px 8px; cursor: pointer; }
+  .due { display: flex; gap: 8px; } .due input, .due select { flex: 1; }
+
+  /* Demo bar: slim strip under the navbar */
+  .demo-bar { background: #1f1406; border-top: 1px solid rgba(255,159,10,.25); }
+  .demo-inner { padding: 6px var(--pad); display: flex; gap: 10px; align-items: center; min-height: 36px; font-size: 13px; }
+  .demo-bar .pill { background: var(--warn); color: #000; font-size: 10.5px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; padding: 2px 8px; border-radius: 3px; flex: none; }
+  .demo-bar .txt { color: var(--soft); flex: 1; min-width: 0; }
+  button.link { background: none; color: var(--warn); min-height: 28px; padding: 0 4px; font-size: 13px; font-weight: 700; flex: none; }
+  button.link:hover { background: none; text-decoration: underline; }
+
+  /* Tabs */
+  .tabs { display: flex; width: fit-content; max-width: 100%; gap: 2px; margin: 16px 0 14px; border-bottom: 1px solid var(--line); overflow-x: auto; scrollbar-width: none; }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tab { background: transparent; color: var(--muted); border-radius: 0; min-height: 42px; padding: 0 16px; font-size: 13px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+  .tab:hover { background: transparent; color: var(--text); }
+  .tab.active { color: var(--text); border-bottom-color: var(--accent); }
+
+  /* Cards */
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px 20px; }
+  .card h2 { margin: 0; font-size: 18px; letter-spacing: -.005em; font-weight: 900; text-transform: uppercase; }
+  .card .sub { margin: 4px 0 14px; color: var(--muted); font-size: 14px; }
+  .fraud { background: var(--err-soft); border-color: transparent; border-left: 3px solid var(--accent); }
+  .fraud h2 { color: var(--accent); }
+  .fraud .row { grid-template-columns: 90px 1fr auto; align-items: end; }
+  .ref-row { grid-template-columns: 1fr auto; align-items: end; }
+  .fraud .sub { margin-bottom: 12px; }
+
+  /* Invoice card */
+  .inv { border: 1px solid var(--line); border-radius: var(--radius-md); padding: 16px; margin-bottom: 12px; background: var(--surface-2); transition: box-shadow .2s, border-color .2s; }
+  .inv:last-child { margin-bottom: 0; }
+  .inv:hover { border-color: var(--line-strong); }
+  .inv-top { display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; }
+  .inv-title { font-weight: 700; font-size: 16px; }
+  .inv-sub { color: var(--muted); font-size: 13px; margin-top: 3px; }
+  .inv-amt { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; flex: none; }
+  .big { font-size: 24px; font-weight: 900; letter-spacing: -.02em; font-variant-numeric: tabular-nums; line-height: 1; }
+  .big small { font-size: 12px; color: var(--muted); font-weight: 600; margin-left: 4px; letter-spacing: 0; }
+  .steps { list-style: none; display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin: 16px 0 12px; padding: 0; }
+  .steps li { font-size: 11px; color: var(--muted); display: flex; flex-direction: column; gap: 6px; text-transform: uppercase; letter-spacing: .05em; font-weight: 600; }
+  .steps li span { height: 3px; border-radius: 2px; background: var(--line-strong); }
+  .steps li.done { color: var(--text); }
+  .steps li.done span { background: var(--accent); }
+  .steps li.next span { background: linear-gradient(90deg, var(--soft) 0 45%, var(--line-strong) 45%); }
+  .steps.overdue li.done span { background: var(--warn); }
+  .inv-meta { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin: 0; padding: 12px 0 0; border-top: 1px solid var(--line); }
+  .inv-meta dt { font-size: 10.5px; color: var(--muted); text-transform: uppercase; letter-spacing: .07em; font-weight: 700; }
+  .inv-meta dd { margin: 3px 0 0; font-size: 14px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .inv-actions { display: flex; gap: 10px; margin-top: 14px; flex-wrap: wrap; align-items: center; }
+  .inv-actions input { width: 120px; min-height: 36px; font-size: 14px; }
+  .badge { font-size: 11px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; padding: 4px 8px; border-radius: 4px; white-space: nowrap; }
+  .b-Created { background: var(--line); color: var(--soft); }
+  .b-Confirmed { background: var(--info-soft); color: var(--info); }
+  .b-Listed { background: var(--violet-soft); color: var(--violet); }
+  .b-Sold { background: var(--teal-soft); color: var(--teal); }
+  .b-Paid { background: var(--ok-soft); color: var(--ok); }
+  .b-Overdue { background: var(--err-soft); color: var(--err); }
+  .yield { color: var(--ok); font-weight: 700; font-size: 15px; }
+  .empty { color: var(--muted); font-size: 14px; padding: 32px 16px; text-align: center; border: 1px dashed var(--line-strong); border-radius: var(--radius-md); }
+
+  /* Data */
+  .kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; margin-bottom: 16px; }
+  .kpi { padding: 18px 20px; }
+  .kpi .k { color: var(--muted); font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+  .kpi .v { font-size: 36px; font-weight: 900; letter-spacing: -.02em; margin-top: 6px; font-variant-numeric: tabular-nums; line-height: 1; }
+  .table-wrap { overflow-x: auto; margin: 0 -8px; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; font-variant-numeric: tabular-nums; }
+  th, td { text-align: left; padding: 12px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  tr:last-child td { border-bottom: 0; }
+  th { color: var(--muted); font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+  .score { display: flex; align-items: center; gap: 10px; }
+  .meter { width: 72px; height: 6px; border-radius: 6px; background: var(--line-strong); overflow: hidden; }
+  .meter i { display: block; height: 100%; border-radius: 6px; }
+
+  /* USD hints next to AVAX amounts */
+  .usd { display: block; font-size: 12.5px; font-weight: 600; color: var(--muted); letter-spacing: 0; margin-top: 4px; font-variant-numeric: tabular-nums; }
+  .hint { font-size: 12.5px; color: var(--muted); margin-top: 6px; min-height: 1em; }
+
+  /* Sell dialog, Avalanche style: dark tile, red edge, uppercase title, square buttons */
+  dialog.sheet { width: min(520px, calc(100% - 32px)); max-height: calc(100% - 32px); padding: 0; border: 0; border-left: 3px solid var(--accent); border-radius: 14px; background: var(--surface); color: var(--text); box-shadow: var(--shadow-lg); overflow: auto; }
+  dialog.sheet[open] { animation: sheet .45s cubic-bezier(.2,.6,.35,1); }
+  dialog.sheet::backdrop { background: rgba(0,0,0,.6); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+  @keyframes sheet { from { transform: translateY(24px); opacity: 0; } }
+  .sheet-in { padding: 24px; }
+  .sheet-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
+  .sheet h2 { margin: 0; font-size: 26px; font-weight: 900; text-transform: uppercase; line-height: .95; }
+  .sheet h2 span { color: var(--accent); }
+  .sheet .sub { margin: 8px 0 0; color: var(--muted); font-size: 14px; }
+  .x { background: transparent; color: var(--muted); min-height: 36px; width: 36px; padding: 0; font-size: 20px; }
+  .x:hover { background: var(--surface-2); color: var(--text); }
+  .face { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin: 20px 0 0; padding: 14px 16px; background: var(--surface-2); border-radius: 8px; font-size: 14px; color: var(--muted); }
+  .face b { color: var(--text); font-size: 15px; }
+  .disc-head { display: flex; justify-content: space-between; align-items: baseline; margin: 22px 0 10px; }
+  .disc-head label { margin: 0; }
+  .disc-val { font-size: 36px; font-weight: 900; line-height: 1; color: var(--accent); font-variant-numeric: tabular-nums; }
+  .sheet input[type=range] { padding: 0; min-height: 28px; background: none; border: 0; accent-color: var(--accent); cursor: pointer; }
+  .presets { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
+  .presets button { flex: 1; min-width: 56px; min-height: 36px; padding: 0 10px; font-size: 13px; font-weight: 700; background: var(--surface-2); color: var(--soft); border: 1px solid var(--line); }
+  .presets button:hover { background: #2a2a2d; color: var(--text); }
+  .presets button.on { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .outcome { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 20px; }
+  .outcome > div { background: var(--surface-2); border-radius: 8px; padding: 14px 16px; }
+  .outcome .k { font-size: 11px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--muted); }
+  .outcome .v { font-size: 22px; font-weight: 900; margin-top: 6px; font-variant-numeric: tabular-nums; line-height: 1.1; }
+  .outcome .v.red { color: var(--accent); } .outcome .v.green { color: var(--ok); }
+  .price-row { margin-top: 16px; }
+  .price-row input { font-family: "JetBrains Mono", ui-monospace, monospace; }
+  .sheet-actions { display: flex; gap: 8px; margin-top: 22px; }
+  .sheet-actions button { flex: 1; min-height: 52px; justify-content: space-between; padding: 0 18px; }
+  .sheet-actions .ghost { flex: 0 0 auto; justify-content: center; }
+  .fine { margin: 14px 0 0; font-size: 12px; color: var(--muted); }
+
+  /* Toasts */
+  #toasts { position: fixed; top: 76px; left: 50%; transform: translateX(-50%); width: min(440px, calc(100% - 32px)); display: flex; flex-direction: column; gap: 8px; z-index: 60; pointer-events: none; }
+  .toast { pointer-events: auto; background: rgba(29,29,31,.94); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); color: var(--text); border: 1px solid var(--line-strong); border-radius: 10px; padding: 14px 16px; box-shadow: var(--shadow-lg); font-weight: 600; font-size: 14px; animation: in .35s cubic-bezier(.2, .9, .3, 1.15); }
+  .toast .t-sub { display: block; font-size: 12.5px; font-weight: 500; color: var(--muted); margin-top: 4px; }
+  .toast.ok { border-left: 3px solid var(--ok); }
+  .toast.err { border-left: 3px solid var(--accent); }
+  .toast.err.big-err { background: var(--accent); border-color: transparent; color: #fff; font-size: 16px; font-weight: 800; letter-spacing: .02em; }
+  .toast.err.big-err .t-sub { color: #fff !important; opacity: .92; }
+  @keyframes in { from { transform: translateY(-14px) scale(.97); opacity: 0; } }
+
+  @media (max-width: 900px) {
+    .hero { grid-template-columns: 1fr; align-items: start; }
+    .layout { grid-template-columns: 1fr; }
+    .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+  @media (max-width: 560px) {
+    dialog.sheet { width: 100%; max-width: 100%; margin: auto 0 0; border-radius: 16px 16px 0 0; border-left: 0; border-top: 3px solid var(--accent); }
+    .outcome .v { font-size: 18px; }
+    .sheet-in { padding: 20px 16px; }
+    .sheet h2 { font-size: 22px; }
+    .row, .fraud .row, .ref-row { grid-template-columns: 1fr; }
+    .inv-meta { grid-template-columns: 1fr 1fr; }
+    .hero { padding-top: 20px; }
+    #bal, .name-input { display: none; }
+    .card { padding: 16px; }
+    .inv-actions button { flex: 1; }
+    .demo-bar .txt { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+<header class="nav">
+  <div class="nav-inner">
+    <a class="brand" href="index.html" aria-label="PayDay home"><svg class="mark" viewBox="0 0 29 24" aria-hidden="true"><rect x="1" y="4" width="5.2" height="17.5" fill="#e84142"/><path d="M7.6 4h5.2l8 8-8 8H7.6l8-8z" fill="#e84142"/><path d="M15.4 4h5.2l8 8-8 8h-5.2l8-8z" fill="#e84142" opacity=".55"/></svg><span class="word">payday</span></a>
+    <div class="nav-right">
+      <div class="chip">
+        <span class="dot" id="dot"></span>
+        <select id="roleSelect" class="hidden" aria-label="Who are you in the demo?"></select>
+        <input class="name-input" id="myName" placeholder="Name wallet" aria-label="Name this wallet">
+        <span class="mono" id="addr">Not connected</span>
+        <select id="acctSelect" class="mono hidden" aria-label="Which of your wallets to act as"></select>
+        <span id="bal"></span>
+        <button class="small" id="connectBtn">Connect wallet</button>
+      </div>
+      <button class="ghost" id="demoBtn">🧪 Demo mode</button>
+    </div>
+  </div>
+  <div class="demo-bar hidden" id="demoBar">
+    <div class="demo-inner">
+      <span class="pill">Demo</span>
+      <span class="txt">Simulated chain, same rules as the real contract. No wallet needed. Pick who you are in the top right.</span>
+      <button class="link" id="resetDemo">Reset data</button>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="hero">
+    <div>
+      <h1>Get paid today.<br><span>Not in 90 days.</span></h1>
+    </div>
+    <div class="net" id="liveBar">
+      <div class="net-top"><span class="dot on"></span>Live on Avalanche Fuji testnet</div>
+      <div class="net-addr">
+        <span class="mono" id="contractShort"></span>
+        <a id="contractLink" target="_blank" rel="noopener">Verified on Snowtrace ↗</a>
+      </div>
+      <div class="net-note">Every action is a real transaction. Test AVAX only, no real money.<span id="rate"></span></div>
+    </div>
+  </section>
+
+
+  <nav class="tabs" role="tablist">
+    <button class="tab active" data-tab="business">Business</button>
+    <button class="tab" data-tab="client">Client</button>
+    <button class="tab" data-tab="investor">Investor</button>
+    <button class="tab" data-tab="board">Public board</button>
+  </nav>
+
+  <!-- BUSINESS -->
+  <section id="tab-business">
+    <div class="layout">
+      <div class="stack">
+        <div class="card">
+          <h2>New invoice</h2>
+          <p class="sub">You delivered the goods. Put the invoice on-chain.</p>
+          <div class="field"><label for="cClient">Client wallet</label><input class="mono" id="cClient" placeholder="0x… the company that owes you"></div>
+          <div class="row field">
+            <div><label for="cAmount">Amount (AVAX)</label><input id="cAmount" type="number" step="0.001" value="0.005" inputmode="decimal"><div class="hint" id="cAmountUsd"></div></div>
+            <div><label for="cDue">Due in</label>
+              <div class="due"><input id="cDue" type="number" value="90" min="1" inputmode="numeric"><select id="cDueUnit" aria-label="Unit"><option value="86400">days</option><option value="60">minutes</option></select></div>
+            </div>
+          </div>
+          <div class="row ref-row">
+            <div><label for="cRef">Reference</label><input id="cRef" value="INV-001" maxlength="60"></div>
+            <button id="createBtn">Create invoice</button>
+          </div>
+        </div>
+        <div class="card fraud">
+          <h2>Fraud test</h2>
+          <p class="sub">Try to sell the same invoice twice. The contract refuses.</p>
+          <div class="row">
+            <div><label for="fId">Invoice #</label><input id="fId" type="number" value="1" min="1" inputmode="numeric"></div>
+            <div><label for="fPrice">Price (AVAX)</label><input id="fPrice" type="number" step="any" value="0.00485" inputmode="decimal"></div>
+            <button id="fraudBtn">Sell again</button>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <h2>Your invoices</h2>
+        <p class="sub">Once the client confirms, sell it to get cash now.</p>
+        <div id="bizList"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CLIENT -->
+  <section id="tab-client" class="hidden">
+    <div class="card">
+      <h2>Invoices addressed to you</h2>
+      <p class="sub">Confirm what you owe. On the due date, pay once, and the money goes to whoever holds the invoice.</p>
+      <div id="clientList"></div>
+    </div>
+  </section>
+
+  <!-- INVESTOR -->
+  <section id="tab-investor" class="hidden">
+    <div class="duo">
+      <div class="card">
+        <h2>Marketplace</h2>
+        <p class="sub">Invoices confirmed by the debtor, for sale at a discount.</p>
+        <div id="marketList"></div>
+      </div>
+      <div class="card">
+        <h2>Your portfolio</h2>
+        <p class="sub">Invoices you hold. You are paid automatically.</p>
+        <div id="portfolioList"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- BOARD -->
+  <section id="tab-board" class="hidden">
+    <div class="kpis">
+      <div class="card kpi"><div class="k">Invoices on-chain</div><div class="v" id="sCount">0</div></div>
+      <div class="card kpi"><div class="k">Face value financed</div><div class="v" id="sFinanced">0</div></div>
+      <div class="card kpi"><div class="k">Paid on time</div><div class="v" id="sOnTime" style="color:var(--ok)">0</div></div>
+      <div class="card kpi"><div class="k">Late or overdue</div><div class="v" id="sLate" style="color:var(--err)">0</div></div>
+    </div>
+    <div class="duo">
+      <div class="card">
+        <h2>Payer reputation</h2>
+        <p class="sub">Every client's payment record. Public and permanent.</p>
+        <div class="table-wrap"><table><thead><tr><th>Client</th><th>On time</th><th>Late</th><th>Overdue</th><th>Score</th></tr></thead><tbody id="repBody"></tbody></table></div>
+      </div>
+      <div class="card hidden" id="balCard">
+        <h2>Wallet balances</h2>
+        <p class="sub">Watch the money move between the parties.</p>
+        <div class="table-wrap"><table><thead><tr><th>Wallet</th><th>Role</th><th>Balance (AVAX)</th></tr></thead><tbody id="balBody"></tbody></table></div>
+      </div>
+    </div>
+    <div class="card">
+      <h2>All invoices</h2>
+      <p class="sub">Every invoice and its current owner.</p>
+      <div class="table-wrap"><table><thead><tr><th>#</th><th>Reference</th><th>Issuer</th><th>Client</th><th>Holder</th><th>Amount</th><th>Due</th><th>Status</th></tr></thead><tbody id="allBody"></tbody></table></div>
+    </div>
+  </section>
+</main>
+<dialog class="sheet" id="sellDlg" aria-labelledby="sellTitle">
+  <form method="dialog" class="sheet-in" id="sellForm">
+    <div class="sheet-top">
+      <div>
+        <h2 id="sellTitle">Sell for cash <span id="sellNo"></span></h2>
+        <p class="sub">Pick your discount. A bigger discount sells faster.</p>
+      </div>
+      <button class="x" value="cancel" formnovalidate aria-label="Close">✕</button>
+    </div>
+    <div class="face"><span>Face value · <span id="sellDue"></span></span><b id="sellFace"></b></div>
+    <div class="disc-head"><label for="sellDisc">Discount</label><span class="disc-val" id="sellDiscV"></span></div>
+    <input type="range" id="sellDisc" min="0.5" max="30" step="0.5" value="5">
+    <div class="presets" id="sellPresets">
+      <button type="button" data-d="2">2%</button><button type="button" data-d="5">5%</button><button type="button" data-d="10">10%</button><button type="button" data-d="15">15%</button><button type="button" data-d="20">20%</button>
+    </div>
+    <div class="outcome">
+      <div><div class="k">You get today</div><div class="v red" id="sellGet"></div><span class="usd" id="sellGetUsd"></span></div>
+      <div><div class="k">Investor earns</div><div class="v green" id="sellEarn"></div><span class="usd" id="sellYear"></span></div>
+    </div>
+    <div class="field price-row"><label for="sellPrice">Or type an exact price (AVAX)</label><input id="sellPrice" type="number" step="any" min="0" inputmode="decimal"></div>
+    <div class="sheet-actions">
+      <button class="ghost" value="cancel" formnovalidate>Cancel</button>
+      <button value="ok" id="sellOk">List for sale <span aria-hidden="true">→</span></button>
+    </div>
+    <p class="fine" id="sellFine"></p>
+  </form>
+</dialog>
+<div id="toasts" aria-live="polite"></div>
+
+<script>
+const FUJI = {
+  chainId: '0xa869',
+  chainName: 'Avalanche Fuji C-Chain',
+  nativeCurrency: { name: 'AVAX', symbol: 'AVAX', decimals: 18 },
+  rpcUrls: ['https://api.avax-test.network/ext/bc/C/rpc'],
+  blockExplorerUrls: ['https://testnet.snowtrace.io/'],
+};
+const EXPLORER = 'https://testnet.snowtrace.io';
+// The deployed PayDay contract (verified on Snowtrace). ?c=0x… overrides it for testing another deploy.
+const CONTRACT = '0x9983d1f7aF8328a92cFb76cBeb12c7894D14D0Ed';
+const ABI = [
+  'function count() view returns (uint256)',
+  'function getInvoice(uint256 id) view returns (tuple(address issuer, address client, address holder, uint256 amount, uint256 price, uint64 dueDate, uint64 paidAt, bytes32 docHash, string ref, uint8 status))',
+  'function paidOnTime(address) view returns (uint256)',
+  'function paidLate(address) view returns (uint256)',
+  'function createInvoice(address client, uint256 amount, uint64 dueDate, string ref) returns (uint256)',
+  'function confirmInvoice(uint256 id)',
+  'function listForSale(uint256 id, uint256 price)',
+  'function buyInvoice(uint256 id) payable',
+  'function payInvoice(uint256 id) payable',
+  'event InvoiceSold(uint256 indexed id, address indexed from, address indexed to, uint256 price)',
+];
+const STATUS = ['Created', 'Confirmed', 'Listed', 'Sold', 'Paid'];
+
+const readProvider = new ethers.JsonRpcProvider(FUJI.rpcUrls[0]);
+let signer = null, me = null, invoices = [], financedTotal = 0n, demo = false;
+let myAccounts = []; // wallets this site may use, from MetaMask
+
+// ---------- AVAX price in USD (CoinGecko, refreshed every minute) ----------
+let avaxUsd = null;
+async function loadPrice() {
+  try {
+    const r = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=avalanche-2&vs_currencies=usd');
+    avaxUsd = (await r.json())['avalanche-2'].usd || null;
+  } catch { /* no price: USD hints just stay hidden */ }
+  $('rate').textContent = avaxUsd ? ` 1 AVAX ≈ $${avaxUsd.toFixed(2)} today.` : '';
+  updateAmountUsd();
+  render();
+}
+const fmtUsd = (v) => '$' + v.toLocaleString(undefined, v >= 1 ? { minimumFractionDigits: 2, maximumFractionDigits: 2 } : { maximumSignificantDigits: 2 });
+// wei (bigint) or AVAX (number) -> "≈ $0.045"
+const usd = (x) => {
+  if (!avaxUsd) return '';
+  const a = typeof x === 'bigint' ? Number(ethers.formatEther(x)) : Number(x);
+  return '≈ ' + fmtUsd(a * avaxUsd);
+};
+function updateAmountUsd() { $('cAmountUsd').textContent = usd($('cAmount').value || 0); }
+
+// ---------- storage (per-viewer convenience only) ----------
+function load(key, fallback) { try { return JSON.parse(localStorage.getItem(key)) ?? fallback; } catch { return fallback; } }
+function save(key, value) { try { localStorage.setItem(key, JSON.stringify(value)); } catch {} }
+let names = load('payday.names', {});
+let contractAddr = new URLSearchParams(location.search).get('c') || CONTRACT;
+
+// ---------- helpers ----------
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const short = (a) => a ? a.slice(0, 6) + '…' + a.slice(-4) : '';
+const who = (a) => {
+  const n = (demo && DEMO_NAMES[a?.toLowerCase()]) || names[a?.toLowerCase()];
+  const mine = me && a?.toLowerCase() === me.toLowerCase() ? ' (you)' : '';
+  return esc(n ? n : short(a)) + mine;
+};
+const avax = (wei) => Number(ethers.formatEther(wei)).toLocaleString(undefined, { maximumFractionDigits: 6 });
+const same = (a, b) => a && b && a.toLowerCase() === b.toLowerCase();
+const now = () => Math.floor(Date.now() / 1000);
+const isOverdue = (inv) => inv.status !== 4 && now() > inv.dueDate;
+function dueText(inv) {
+  const d = inv.dueDate - now();
+  const date = new Date(inv.dueDate * 1000).toLocaleString();
+  if (inv.status === 4) return 'Paid ' + new Date(inv.paidAt * 1000).toLocaleString();
+  if (d < 0) return '⚠️ Overdue since ' + date;
+  if (d < 3600) return 'Due in ' + Math.ceil(d / 60) + ' min';
+  if (d < 86400) return 'Due in ' + Math.ceil(d / 3600) + ' h';
+  return 'Due in ' + Math.ceil(d / 86400) + ' days';
+}
+const STATUS_LABEL = ['Awaiting client', 'Confirmed', 'For sale', 'Financed', 'Paid'];
+function badge(inv) {
+  if (isOverdue(inv)) return '<span class="badge b-Overdue">Overdue</span>';
+  return `<span class="badge b-${STATUS[inv.status]}">${STATUS_LABEL[inv.status]}</span>`;
+}
+const STEPS = ['Issued', 'Confirmed', 'Financed', 'Paid'];
+function stepper(inv) {
+  const cur = inv.status === 4 ? 3 : inv.status === 3 ? 2 : inv.status >= 1 ? 1 : 0;
+  return `<ol class="steps${isOverdue(inv) ? ' overdue' : ''}">${STEPS.map((s, i) =>
+    `<li class="${i <= cur ? 'done' : ''}${i === cur + 1 ? ' next' : ''}"><span></span>${s}</li>`).join('')}</ol>`;
+}
+function txLink(hash) {
+  if (demo) return `<span class="mono">Simulated tx ${hash.slice(0, 18)}…</span>`;
+  return `<a href="${EXPLORER}/tx/${hash}" target="_blank" rel="noopener">View on Snowtrace ↗</a>`;
+}
+
+function toast(html, kind = 'info', ms = 7000) {
+  const el = document.createElement('div');
+  el.className = 'toast ' + kind;
+  el.innerHTML = html;
+  $('toasts').appendChild(el);
+  setTimeout(() => el.remove(), ms);
+  return el;
+}
+
+function reason(e) {
+  if (e?.code === 'ACTION_REJECTED' || e?.code === 4001) return 'Cancelled in wallet';
+  const raw = e?.reason || e?.revert?.args?.[0] || e?.info?.error?.data?.message || e?.info?.error?.message || e?.error?.message || e?.shortMessage || e?.message || 'Transaction failed';
+  return String(raw).replace(/^.*execution reverted:?\s*/i, '').replace(/^"|"$/g, '') || 'Transaction reverted';
+}
+
+async function send(label, makeTx) {
+  if (!demo && !contractAddr) return toast('Paste the contract address first', 'err');
+  try {
+    let c;
+    if (demo) c = simContract;
+    else {
+      if (!signer) await connect();
+      c = new ethers.Contract(contractAddr, ABI, signer);
+    }
+    const pending = toast(`⏳ ${esc(label)}… ${demo ? 'signing' : 'confirm in MetaMask'}`, 'info', 60000);
+    let tx;
+    try { tx = await makeTx(c); } finally { pending.remove(); }
+    const mining = toast(`⛓️ ${esc(label)} sent<span class="t-sub">${txLink(tx.hash)}</span>`, 'info', 60000);
+    await tx.wait();
+    mining.remove();
+    toast(`✅ ${esc(label)} confirmed ${demo ? 'on the simulated chain' : 'on Avalanche'}<span class="t-sub">${txLink(tx.hash)}</span>`, 'ok', 12000);
+    if (demo && sim.note) { toast(sim.note, 'ok', 12000); sim.note = null; }
+    await refresh();
+  } catch (e) {
+    console.error(e);
+    toast(`⛔ REJECTED BY THE CONTRACT<span class="t-sub" style="font-size:15px;color:#fca5a5">${esc(reason(e))}</span>`, 'err big-err', 12000);
+  }
+}
+
+// ---------- demo mode: in-browser simulation of the PayDay contract ----------
+const DEMO_ACTORS = [
+  { addr: '0xba4e000000000000000000000000000000000001', name: 'Bakery', role: 'Business', tab: 'business', icon: '🏭' },
+  { addr: '0xc11e000000000000000000000000000000000002', name: 'Supermarket', role: 'Client', tab: 'client', icon: '🏬' },
+  { addr: '0x1a5e000000000000000000000000000000000003', name: 'Investor', role: 'Investor', tab: 'investor', icon: '💰' },
+];
+const DEMO_NAMES = Object.fromEntries(DEMO_ACTORS.map((a) => [a.addr, a.name]));
+const E = (x) => ethers.parseEther(String(x));
+const lc = (a) => String(a).toLowerCase();
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+let sim = null;
+
+// Demo starts empty: every invoice is created live during the pitch.
+function seedDemo() {
+  const [business, client, investor] = DEMO_ACTORS.map((a) => a.addr);
+  sim = {
+    invoices: [],
+    onTime: {},
+    late: {},
+    balances: { [business]: E(1), [client]: E(5), [investor]: E(10) },
+    financed: 0n,
+    note: null,
+  };
+}
+
+function revert(msg) { const e = new Error(msg); e.reason = msg; throw e; }
+// Mimics a transaction: rules are checked first (like a revert), then a block "mines".
+function simTx(fn) {
+  return (async () => {
+    await sleep(500);
+    fn();
+    return { hash: ethers.hexlify(ethers.randomBytes(32)), wait: () => sleep(900) };
+  })();
+}
+function simGet(id) {
+  id = Number(id);
+  if (!(id > 0 && id <= sim.invoices.length)) revert('Invoice does not exist');
+  return sim.invoices[id - 1];
+}
+function simPay(from, to, value) {
+  from = lc(from); to = lc(to);
+  if ((sim.balances[from] ?? 0n) < value) revert('Insufficient AVAX balance');
+  sim.balances[from] -= value;
+  sim.balances[to] = (sim.balances[to] ?? 0n) + value;
+}
+const nameOf = (a) => DEMO_NAMES[lc(a)] || short(a);
+
+// Same rules and revert messages as PayDay.sol
+const simContract = {
+  count: async () => BigInt(sim.invoices.length),
+  getInvoice: async (id) => simGet(id),
+  paidOnTime: async (a) => BigInt(sim.onTime[lc(a)] || 0),
+  paidLate: async (a) => BigInt(sim.late[lc(a)] || 0),
+  createInvoice: (client, amount, dueDate, ref) => simTx(() => {
+    if (!ethers.isAddress(client) || same(client, me)) revert('Invalid client address');
+    if (amount <= 0n) revert('Amount must be greater than 0');
+    if (Number(dueDate) <= now()) revert('Due date must be in the future');
+    sim.invoices.push({ issuer: lc(me), client: lc(client), holder: lc(me), amount, price: 0n, dueDate: Number(dueDate), paidAt: 0, docHash: ethers.id(ref), ref, status: 0 });
+  }),
+  confirmInvoice: (id) => simTx(() => {
+    const inv = simGet(id);
+    if (!same(me, inv.client)) revert('Only the client can confirm this invoice');
+    if (inv.status !== 0) revert('Invoice already confirmed');
+    inv.status = 1;
+  }),
+  listForSale: (id, price) => simTx(() => {
+    const inv = simGet(id);
+    if (!same(me, inv.holder)) revert('Not the holder - this invoice was already sold');
+    if (inv.status !== 1 && inv.status !== 3) revert('Invoice must be confirmed by the client first');
+    if (price <= 0n || price > inv.amount) revert('Price must be between 0 and the face value');
+    inv.price = price;
+    inv.status = 2;
+  }),
+  buyInvoice: (id, opts) => simTx(() => {
+    const inv = simGet(id);
+    if (inv.status !== 2) revert('Invoice is not for sale');
+    if (same(me, inv.holder)) revert('You already hold this invoice');
+    if (same(me, inv.client)) revert('The client cannot buy its own debt');
+    if (opts.value !== inv.price) revert('Send exactly the listed price');
+    const seller = inv.holder;
+    simPay(me, seller, opts.value);
+    inv.holder = lc(me);
+    inv.status = 3;
+    sim.financed += opts.value;
+    sim.note = `💸 ${esc(nameOf(seller))} received ${avax(opts.value)} AVAX instantly`;
+  }),
+  payInvoice: (id, opts) => simTx(() => {
+    const inv = simGet(id);
+    if (!same(me, inv.client)) revert('Only the client can pay this invoice');
+    if (![1, 2, 3].includes(inv.status)) revert('Invoice is not payable');
+    if (opts.value !== inv.amount) revert('Send exactly the invoice amount');
+    simPay(me, inv.holder, opts.value);
+    const late = now() > inv.dueDate;
+    inv.status = 4;
+    inv.paidAt = now();
+    inv.price = 0n;
+    const book = late ? sim.late : sim.onTime;
+    book[lc(inv.client)] = (book[lc(inv.client)] || 0) + 1;
+    sim.note = `💸 ${esc(nameOf(inv.holder))} received ${avax(opts.value)} AVAX${late ? ' · recorded as LATE payment' : ' · recorded as on time'}`;
+  }),
+};
+
+function showTab(name) {
+  document.querySelectorAll('.tab').forEach((x) => x.classList.toggle('active', x.dataset.tab === name));
+  ['business', 'client', 'investor', 'board'].forEach((n) => $('tab-' + n).classList.toggle('hidden', n !== name));
+}
+
+function setDemo(on) {
+  demo = on;
+  if (on && !sim) seedDemo();
+  signer = null;
+  me = on ? DEMO_ACTORS[0].addr : null;
+  $('demoBtn').textContent = on ? '🔌 Switch to live (Fuji)' : '🧪 Demo mode';
+  $('demoBar').classList.toggle('hidden', !on);
+  $('liveBar').classList.toggle('hidden', on);
+  $('balCard').classList.toggle('hidden', !on);
+  ['connectBtn', 'myName', 'addr'].forEach((id) => $(id).classList.toggle('hidden', on));
+  myAccounts = [];
+  $('acctSelect').classList.add('hidden');
+  $('roleSelect').classList.toggle('hidden', !on);
+  $('dot').classList.toggle('on', on);
+  $('bal').textContent = '';
+  if (on) {
+    $('roleSelect').value = me;
+    $('cClient').value = DEMO_ACTORS[1].addr;
+    showTab('business');
+  } else {
+    $('addr').textContent = 'Not connected';
+    $('connectBtn').textContent = 'Connect wallet';
+    $('cClient').value = '';
+  }
+  invoices = [];
+  render();
+  refresh();
+}
+
+$('roleSelect').innerHTML = DEMO_ACTORS.map((a) => `<option value="${a.addr}">${a.icon} ${a.role === a.name ? a.role : a.role + ' · ' + esc(a.name)}</option>`).join('');
+$('roleSelect').onchange = (e) => {
+  me = e.target.value;
+  showTab(DEMO_ACTORS.find((a) => a.addr === me).tab);
+  refresh();
+};
+$('demoBtn').onclick = () => setDemo(!demo);
+$('resetDemo').onclick = () => { seedDemo(); setDemo(true); toast('Demo data reset', 'ok', 3000); };
+
+// ---------- wallet ----------
+// pick = true opens MetaMask's account picker, so you can switch (and allow) accounts
+async function connect(pick = false) {
+  if (!window.ethereum) { toast('MetaMask not found. Install it, and open this page from http://localhost (not a file).', 'err'); throw new Error('no wallet'); }
+  if (pick) await window.ethereum.request({ method: 'wallet_requestPermissions', params: [{ eth_accounts: {} }] });
+  const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+  try {
+    await window.ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: FUJI.chainId }] });
+  } catch (e) {
+    if (e.code === 4902 || e?.data?.originalError?.code === 4902) {
+      await window.ethereum.request({ method: 'wallet_addEthereumChain', params: [FUJI] });
+    } else throw e;
+  }
+  myAccounts = accounts;
+  // MetaMask lists the active account first
+  await useAccount(accounts[0]);
+  $('dot').classList.add('on');
+  $('connectBtn').textContent = 'Add accounts';
+}
+// act as one of the accounts allowed for this site (transactions are sent from it)
+async function useAccount(addr) {
+  signer = await new ethers.BrowserProvider(window.ethereum).getSigner(addr);
+  me = await signer.getAddress();
+  $('addr').textContent = short(me);
+  $('myName').value = names[me.toLowerCase()] || '';
+  fillAccounts();
+  await refresh();
+}
+function fillAccounts() {
+  const many = myAccounts.length > 1;
+  $('addr').classList.toggle('hidden', many);
+  $('acctSelect').classList.toggle('hidden', !many);
+  $('acctSelect').innerHTML = myAccounts.map((a) => {
+    const n = names[a.toLowerCase()];
+    return `<option value="${a}">${n ? esc(n) + ' · ' : ''}${short(a)}</option>`;
+  }).join('');
+  $('acctSelect').value = myAccounts.find((a) => same(a, me)) || '';
+}
+$('acctSelect').onchange = (e) => useAccount(e.target.value).catch((err) => toast(esc(reason(err)), 'err'));
+if (window.ethereum) {
+  window.ethereum.on?.('accountsChanged', (accounts) => {
+    if (demo || !me) return;
+    if (!accounts.length) return setDemo(false); // site disconnected in MetaMask
+    connect().catch(() => {});
+  });
+  window.ethereum.on?.('chainChanged', () => { if (!demo) location.reload(); });
+}
+$('connectBtn').onclick = () => connect(!!me).catch((e) => toast(esc(reason(e)), 'err'));
+$('myName').onchange = (e) => {
+  if (!me) return;
+  names[me.toLowerCase()] = e.target.value.trim();
+  save('payday.names', names);
+  if (!demo) fillAccounts();
+  render();
+};
+
+// ---------- contract address ----------
+function setContract(addr, load = true) {
+  if (!ethers.isAddress(addr)) return toast('That is not a valid contract address', 'err');
+  contractAddr = ethers.getAddress(addr);
+  $('contractShort').textContent = short(contractAddr);
+  $('contractShort').title = contractAddr;
+  $('contractLink').href = `${EXPLORER}/address/${contractAddr}`;
+  if (load) refresh();
+}
+
+// ---------- tabs ----------
+document.querySelectorAll('.tab').forEach((t) => t.onclick = () => showTab(t.dataset.tab));
+
+// ---------- actions ----------
+$('createBtn').onclick = () => {
+  const client = $('cClient').value.trim();
+  if (!ethers.isAddress(client)) return toast('Enter a valid client wallet address', 'err');
+  const amount = ethers.parseEther($('cAmount').value || '0');
+  const due = BigInt(now() + Number($('cDue').value) * Number($('cDueUnit').value));
+  send('Create invoice', (c) => c.createInvoice(client, amount, due, $('cRef').value.trim()));
+};
+$('fraudBtn').onclick = () => {
+  const id = BigInt($('fId').value);
+  const price = ethers.parseEther($('fPrice').value || '0');
+  send(`Re-sell invoice #${id}`, (c) => c.listForSale(id, price));
+};
+// delegated buttons inside rendered lists
+document.addEventListener('click', (e) => {
+  const b = e.target.closest('[data-act]');
+  if (!b) return;
+  const id = BigInt(b.dataset.id);
+  const inv = invoices.find((x) => x.id === Number(b.dataset.id));
+  switch (b.dataset.act) {
+    case 'confirm': return send(`Confirm invoice #${id}`, (c) => c.confirmInvoice(id));
+    case 'sell': return openSell(inv);
+    case 'buy':
+      $('fId').value = String(id); // pre-fill the fraud test with the invoice just sold
+      return send(`Buy invoice #${id}`, (c) => c.buyInvoice(id, { value: inv.price }));
+    case 'pay': return send(`Pay invoice #${id}`, (c) => c.payInvoice(id, { value: inv.amount }));
+  }
+});
+
+// ---------- data ----------
+let refreshing = false;
+async function refresh() {
+  if ((!demo && !contractAddr) || refreshing) return;
+  refreshing = true;
+  const wasDemo = demo;
+  try {
+    const c = demo ? simContract : new ethers.Contract(contractAddr, ABI, readProvider);
+    const n = Number(await c.count());
+    const list = await Promise.all(Array.from({ length: n }, (_, i) => c.getInvoice(i + 1)));
+    if (demo !== wasDemo) return setTimeout(refresh);
+    invoices = list.map((r, i) => ({
+      id: i + 1, issuer: r.issuer, client: r.client, holder: r.holder,
+      amount: r.amount, price: r.price, dueDate: Number(r.dueDate), paidAt: Number(r.paidAt),
+      docHash: r.docHash, ref: r.ref, status: Number(r.status),
+    }));
+    const clients = [...new Set(invoices.map((x) => x.client.toLowerCase()))];
+    const rep = await Promise.all(clients.map(async (a) => [a, Number(await c.paidOnTime(a)), Number(await c.paidLate(a))]));
+    if (demo !== wasDemo) return setTimeout(refresh); // mode switched while loading: reload for the new mode
+    window.__rep = rep;
+    // suggest the next invoice number until the user types their own
+    if ($('cRef').dataset.auto) $('cRef').value = 'INV-' + String(n + 1).padStart(3, '0');
+    // face value of invoices an investor bought (the holder is no longer the issuer);
+    // read from state, since public RPCs only return recent event logs
+    financedTotal = invoices.filter((x) => !same(x.holder, x.issuer)).reduce((s, x) => s + x.amount, 0n);
+    if (me) $('bal').textContent = avax(demo ? (sim.balances[lc(me)] ?? 0n) : await readProvider.getBalance(me)) + ' AVAX';
+    render();
+  } catch (e) {
+    console.error(e);
+    toast('Could not read the contract. Is the address right and deployed on Fuji?', 'err');
+  } finally { refreshing = false; }
+}
+
+function invCard(inv, actions = '') {
+  return `<article class="inv">
+    <div class="inv-top">
+      <div>
+        <div class="inv-title">${esc(inv.ref || 'Invoice')}</div>
+        <div class="inv-sub">Invoice #${inv.id} · ${dueText(inv)}</div>
+      </div>
+      <div class="inv-amt">
+        <div class="big">${avax(inv.amount)}<small>AVAX</small><span class="usd">${usd(inv.amount)}</span></div>
+        ${badge(inv)}
+      </div>
+    </div>
+    ${stepper(inv)}
+    <dl class="inv-meta">
+      <div><dt>From</dt><dd>${who(inv.issuer)}</dd></div>
+      <div><dt>Owed by</dt><dd>${who(inv.client)}</dd></div>
+      <div><dt>Pays out to</dt><dd>${who(inv.holder)}</dd></div>
+      <div><dt>Document</dt><dd class="mono" title="keccak256 fingerprint of the invoice document">${inv.docHash.slice(0, 10)}…</dd></div>
+    </dl>
+    ${actions ? `<div class="inv-actions">${actions}</div>` : ''}
+  </article>`;
+}
+const empty = (t) => `<div class="empty">${t}</div>`;
+
+function render() {
+  const mine = (a) => same(a, me);
+
+  // Business
+  const biz = invoices.filter((x) => mine(x.issuer)).reverse();
+  $('bizList').innerHTML = !me ? empty('Connect the business wallet') : biz.length ? biz.map((inv) => {
+    let a = '';
+    if (inv.status === 0) a = '<span style="color:var(--muted);font-size:13px">⏳ Waiting for the client to confirm</span>';
+    else if (mine(inv.holder) && (inv.status === 1 || inv.status === 3)) {
+      a = `<button class="small" data-act="sell" data-id="${inv.id}">Sell for cash now →</button><span style="color:var(--muted);font-size:13px">You choose the discount</span>`;
+    } else if (inv.status === 2) a = `<span style="color:var(--muted);font-size:13px">On the market for ${avax(inv.price)} AVAX</span>`;
+    else if (inv.status === 3) a = `<span style="color:var(--ok);font-size:13px;font-weight:600">💸 Sold to ${who(inv.holder)}, cash received</span>`;
+    return invCard(inv, a);
+  }).join('') : empty('No invoices yet');
+
+  // Client
+  const cl = invoices.filter((x) => mine(x.client)).reverse();
+  $('clientList').innerHTML = !me ? empty('Connect the client wallet') : cl.length ? cl.map((inv) => {
+    let a = '';
+    if (inv.status === 0) a = `<button class="small" data-act="confirm" data-id="${inv.id}">✍️ Confirm I owe this</button>`;
+    else if (inv.status !== 4) a = `<button class="small ok" data-act="pay" data-id="${inv.id}">Pay ${avax(inv.amount)} AVAX ${usd(inv.amount) ? '(' + usd(inv.amount) + ')' : ''}</button><span style="color:var(--muted);font-size:13px">goes to ${who(inv.holder)}</span>`;
+    return invCard(inv, a);
+  }).join('') : empty('No invoices addressed to this wallet');
+
+  // Investor
+  const market = invoices.filter((x) => x.status === 2).reverse();
+  $('marketList').innerHTML = market.length ? market.map((inv) => {
+    const disc = Number(inv.amount - inv.price) / Number(inv.amount) * 100;
+    const days = Math.max((inv.dueDate - now()) / 86400, 0);
+    const r = (window.__rep || []).find(([a]) => same(a, inv.client));
+    const repTxt = r ? `${r[1]} on time · ${r[2]} late` : 'no history';
+    const a = `<button class="small ok" data-act="buy" data-id="${inv.id}" ${mine(inv.holder) || mine(inv.client) ? 'disabled' : ''}>Buy for ${avax(inv.price)} AVAX ${usd(inv.price) ? '(' + usd(inv.price) + ')' : ''}</button>
+      <span class="yield">+${disc.toFixed(1)}% in ${days < 1 ? '<1' : Math.ceil(days)} days</span>
+      <span style="color:var(--muted);font-size:13px">Payer record: ${repTxt}</span>`;
+    return invCard(inv, a);
+  }).join('') : '';
+  // Confirmed by the client but not listed yet: visible, not buyable
+  const upcoming = invoices.filter((x) => x.status === 1).reverse();
+  $('marketList').innerHTML += upcoming.map((inv) => invCard(inv,
+    `<button class="small" disabled>Not for sale yet</button><span style="color:var(--muted);font-size:13px">Confirmed by ${who(inv.client)}. Waiting for ${who(inv.holder)} to set a price.</span>`
+  )).join('');
+  if (!market.length && !upcoming.length) $('marketList').innerHTML = empty('Nothing for sale right now');
+
+  const port = invoices.filter((x) => mine(x.holder) && !mine(x.issuer)).reverse();
+  $('portfolioList').innerHTML = !me ? empty('Connect the investor wallet') : port.length ? port.map((inv) => invCard(inv,
+    inv.status === 4 ? '<span style="color:var(--ok);font-weight:600">✅ Paid, the money is in your wallet</span>' : `<span style="color:var(--muted);font-size:13px">You will receive ${avax(inv.amount)} AVAX when the client pays</span>`
+  )).join('') : empty('You hold no invoices yet');
+
+  // Board
+  if (demo) $('balBody').innerHTML = DEMO_ACTORS.map((a) =>
+    `<tr><td>${a.icon} ${esc(a.name)}${same(a.addr, me) ? ' (you)' : ''}</td><td>${a.role}</td><td class="mono">${avax(sim.balances[a.addr] ?? 0n)}</td></tr>`).join('');
+  $('sCount').textContent = invoices.length;
+  $('sFinanced').textContent = avax(financedTotal);
+  const rep = window.__rep || [];
+  $('sOnTime').textContent = rep.reduce((s, r) => s + r[1], 0);
+  $('sLate').textContent = rep.reduce((s, r) => s + r[2], 0) + invoices.filter(isOverdue).length;
+  $('repBody').innerHTML = rep.length ? rep.map(([a, on, late]) => {
+    const overdue = invoices.filter((x) => same(x.client, a) && isOverdue(x)).length;
+    const total = on + late + overdue;
+    const score = total ? Math.round(on / total * 100) : null;
+    const color = score === null ? 'var(--muted)' : score >= 80 ? 'var(--ok)' : score >= 50 ? 'var(--warn)' : 'var(--err)';
+    return `<tr><td>${who(a)}</td><td>${on}</td><td>${late}</td><td>${overdue}</td><td><div class="score"><div class="meter"><i style="width:${score ?? 0}%;background:${color}"></i></div><b style="color:${color}">${score === null ? 'n/a' : score + '%'}</b></div></td></tr>`;
+  }).join('') : '<tr><td colspan="5" style="color:var(--muted)">No clients yet</td></tr>';
+  $('allBody').innerHTML = invoices.length ? invoices.slice().reverse().map((inv) => `<tr>
+    <td>${inv.id}</td><td>${esc(inv.ref)}</td><td>${who(inv.issuer)}</td><td>${who(inv.client)}</td><td>${who(inv.holder)}</td>
+    <td>${avax(inv.amount)}</td><td>${dueText(inv)}</td><td>${badge(inv)}</td></tr>`).join('') : '<tr><td colspan="8" style="color:var(--muted)">No invoices yet</td></tr>';
+}
+
+// ---------- sell dialog: the business picks its discount ----------
+let selling = null;
+function openSell(inv) {
+  selling = inv;
+  const days = Math.max(Math.ceil((inv.dueDate - now()) / 86400), 1);
+  $('sellNo').textContent = '#' + inv.id;
+  $('sellFace').textContent = `${avax(inv.amount)} AVAX ${usd(inv.amount)}`;
+  $('sellDue').textContent = `due in ${days} day${days === 1 ? '' : 's'}`;
+  $('sellFine').textContent = (avaxUsd ? `USD at today's AVAX price ($${avaxUsd.toFixed(2)}). ` : '') + (demo ? 'Demo: simulated, nothing is sent.' : 'Test AVAX on Fuji has no real value.');
+  setDisc(5);
+  $('sellDlg').showModal();
+}
+// plain decimal string (no 1e-7 notation, which parseEther rejects)
+const dec = (n) => Number(n).toFixed(8).replace(/\.?0+$/, '') || '0';
+// keep slider, presets, exact price and the outcome boxes in sync
+function setDisc(d, fromPrice = false) {
+  const face = Number(ethers.formatEther(selling.amount));
+  d = Math.min(Math.max(d, 0), 99.9);
+  const price = fromPrice ? Number($('sellPrice').value) : Number(dec(face * (1 - d / 100)));
+  if (!fromPrice) { $('sellPrice').value = dec(price); $('sellDisc').value = d; }
+  else $('sellDisc').value = Math.min(Math.max(d, 0.5), 30);
+  const days = Math.max((selling.dueDate - now()) / 86400, 1);
+  const ret = price > 0 ? (face - price) / price : 0;
+  $('sellDiscV').textContent = (Math.round(d * 10) / 10) + '%';
+  $('sellGet').textContent = avax(ethers.parseEther(dec(price || 0))) + ' AVAX';
+  $('sellGetUsd').textContent = usd(price);
+  $('sellEarn').textContent = '+' + (ret * 100).toFixed(1) + '%';
+  $('sellYear').textContent = `≈ ${Math.round(ret * 365 / days * 100)}% a year · ${usd(face - price) ? 'profit ' + usd(face - price) : avax(ethers.parseEther((face - price).toFixed(18))) + ' AVAX profit'}`;
+  $('sellOk').firstChild.textContent = `List for ${avax(ethers.parseEther(dec(price || 0)))} AVAX `;
+  $('sellOk').disabled = !(price > 0 && price <= face);
+  document.querySelectorAll('#sellPresets button').forEach((b) => b.classList.toggle('on', Number(b.dataset.d) === d));
+}
+$('sellDisc').oninput = (e) => setDisc(Number(e.target.value));
+$('sellPresets').onclick = (e) => { const b = e.target.closest('[data-d]'); if (b) setDisc(Number(b.dataset.d)); };
+$('sellPrice').oninput = (e) => {
+  const face = Number(ethers.formatEther(selling.amount));
+  setDisc((1 - Number(e.target.value) / face) * 100, true);
+};
+$('sellDlg').onclose = () => {
+  if ($('sellDlg').returnValue !== 'ok' || !selling) return;
+  const id = BigInt(selling.id), price = ethers.parseEther(dec($('sellPrice').value));
+  selling = null;
+  send(`List invoice #${id}`, (c) => c.listForSale(id, price));
+};
+
+// ---------- boot ----------
+$('cRef').dataset.auto = '1';
+$('cRef').oninput = () => delete $('cRef').dataset.auto;
+const startDemo = new URLSearchParams(location.search).has('demo');
+setContract(contractAddr, !startDemo);
+if (startDemo) setDemo(true);
+setInterval(refresh, 8000);
+$('cAmount').oninput = updateAmountUsd;
+loadPrice(); setInterval(loadPrice, 60000);
+</script>
+</body>
+</html>
