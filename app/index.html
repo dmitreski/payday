@@ -63,6 +63,7 @@
   .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); flex: none; }
   .dot.on { background: var(--ok); box-shadow: 0 0 0 3px var(--ok-soft); }
   #bal { color: var(--muted); }
+  #acctSelect { width: auto; min-height: 36px; font-size: 13px; background: transparent; border: 0; padding: 0 4px; }
   #roleSelect { width: auto; min-height: 36px; font-size: 14px; font-weight: 600; background: transparent; border: 0; padding: 0 4px; }
   .name-input { width: 110px; min-height: 32px; padding: 0 8px; font-size: 14px; background: transparent; border-color: transparent; }
 
@@ -205,6 +206,7 @@
         <select id="roleSelect" class="hidden" aria-label="Who are you in the demo?"></select>
         <input class="name-input" id="myName" placeholder="Name wallet" aria-label="Name this wallet">
         <span class="mono" id="addr">Not connected</span>
+        <select id="acctSelect" class="mono hidden" aria-label="Which of your wallets to act as"></select>
         <span class="mono" id="bal"></span>
         <button class="small" id="connectBtn">Connect wallet</button>
       </div>
@@ -248,7 +250,7 @@
           <p class="sub">You delivered the goods. Put the invoice on-chain.</p>
           <div class="field"><label for="cClient">Client wallet</label><input class="mono" id="cClient" placeholder="0x… the company that owes you"></div>
           <div class="row field">
-            <div><label for="cAmount">Amount (AVAX)</label><input id="cAmount" type="number" step="0.001" value="0.1" inputmode="decimal"></div>
+            <div><label for="cAmount">Amount (AVAX)</label><input id="cAmount" type="number" step="0.001" value="0.005" inputmode="decimal"></div>
             <div><label for="cDue">Due in</label>
               <div class="due"><input id="cDue" type="number" value="90" min="1" inputmode="numeric"><select id="cDueUnit" aria-label="Unit"><option value="86400">days</option><option value="60">minutes</option></select></div>
             </div>
@@ -261,7 +263,7 @@
           <p class="sub">The classic factoring fraud: selling the same invoice twice. Try it.</p>
           <div class="row field">
             <div><label for="fId">Invoice #</label><input id="fId" type="number" value="1" min="1" inputmode="numeric"></div>
-            <div><label for="fPrice">Price (AVAX)</label><input id="fPrice" type="number" step="0.001" value="0.097" inputmode="decimal"></div>
+            <div><label for="fPrice">Price (AVAX)</label><input id="fPrice" type="number" step="any" value="0.00485" inputmode="decimal"></div>
           </div>
           <button class="block" id="fraudBtn">Try to sell it again</button>
         </div>
@@ -353,6 +355,7 @@ const STATUS = ['Created', 'Confirmed', 'Listed', 'Sold', 'Paid'];
 
 const readProvider = new ethers.JsonRpcProvider(FUJI.rpcUrls[0]);
 let signer = null, me = null, invoices = [], financedTotal = 0n, demo = false;
+let myAccounts = []; // wallets this site may use, from MetaMask
 
 // ---------- storage (per-viewer convenience only) ----------
 function load(key, fallback) { try { return JSON.parse(localStorage.getItem(key)) ?? fallback; } catch { return fallback; } }
@@ -369,7 +372,7 @@ const who = (a) => {
   const mine = me && a?.toLowerCase() === me.toLowerCase() ? ' (you)' : '';
   return esc(n ? n : short(a)) + mine;
 };
-const avax = (wei) => Number(ethers.formatEther(wei)).toLocaleString(undefined, { maximumFractionDigits: 4 });
+const avax = (wei) => Number(ethers.formatEther(wei)).toLocaleString(undefined, { maximumFractionDigits: 6 });
 const same = (a, b) => a && b && a.toLowerCase() === b.toLowerCase();
 const now = () => Math.floor(Date.now() / 1000);
 const isOverdue = (inv) => inv.status !== 4 && now() > inv.dueDate;
@@ -556,6 +559,8 @@ function setDemo(on) {
   $('liveBar').classList.toggle('hidden', on);
   $('balCard').classList.toggle('hidden', !on);
   ['connectBtn', 'myName', 'addr'].forEach((id) => $(id).classList.toggle('hidden', on));
+  myAccounts = [];
+  $('acctSelect').classList.add('hidden');
   $('roleSelect').classList.toggle('hidden', !on);
   $('dot').classList.toggle('on', on);
   $('bal').textContent = '';
@@ -583,9 +588,11 @@ $('demoBtn').onclick = () => setDemo(!demo);
 $('resetDemo').onclick = () => { seedDemo(); setDemo(true); toast('Demo data reset', 'ok', 3000); };
 
 // ---------- wallet ----------
-async function connect() {
+// pick = true opens MetaMask's account picker, so you can switch (and allow) accounts
+async function connect(pick = false) {
   if (!window.ethereum) { toast('MetaMask not found. Install it, and open this page from http://localhost (not a file).', 'err'); throw new Error('no wallet'); }
-  await window.ethereum.request({ method: 'eth_requestAccounts' });
+  if (pick) await window.ethereum.request({ method: 'wallet_requestPermissions', params: [{ eth_accounts: {} }] });
+  const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
   try {
     await window.ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: FUJI.chainId }] });
   } catch (e) {
@@ -593,24 +600,46 @@ async function connect() {
       await window.ethereum.request({ method: 'wallet_addEthereumChain', params: [FUJI] });
     } else throw e;
   }
-  const bp = new ethers.BrowserProvider(window.ethereum);
-  signer = await bp.getSigner();
-  me = await signer.getAddress();
+  myAccounts = accounts;
+  // MetaMask lists the active account first
+  await useAccount(accounts[0]);
   $('dot').classList.add('on');
+  $('connectBtn').textContent = 'Add accounts';
+}
+// act as one of the accounts allowed for this site (transactions are sent from it)
+async function useAccount(addr) {
+  signer = await new ethers.BrowserProvider(window.ethereum).getSigner(addr);
+  me = await signer.getAddress();
   $('addr').textContent = short(me);
-  $('connectBtn').textContent = 'Switch';
   $('myName').value = names[me.toLowerCase()] || '';
+  fillAccounts();
   await refresh();
 }
+function fillAccounts() {
+  const many = myAccounts.length > 1;
+  $('addr').classList.toggle('hidden', many);
+  $('acctSelect').classList.toggle('hidden', !many);
+  $('acctSelect').innerHTML = myAccounts.map((a) => {
+    const n = names[a.toLowerCase()];
+    return `<option value="${a}">${n ? esc(n) + ' · ' : ''}${short(a)}</option>`;
+  }).join('');
+  $('acctSelect').value = myAccounts.find((a) => same(a, me)) || '';
+}
+$('acctSelect').onchange = (e) => useAccount(e.target.value).catch((err) => toast(esc(reason(err)), 'err'));
 if (window.ethereum) {
-  window.ethereum.on?.('accountsChanged', () => { if (!demo) connect().catch(() => {}); });
+  window.ethereum.on?.('accountsChanged', (accounts) => {
+    if (demo || !me) return;
+    if (!accounts.length) return setDemo(false); // site disconnected in MetaMask
+    connect().catch(() => {});
+  });
   window.ethereum.on?.('chainChanged', () => { if (!demo) location.reload(); });
 }
-$('connectBtn').onclick = () => connect().catch((e) => toast(esc(reason(e)), 'err'));
+$('connectBtn').onclick = () => connect(!!me).catch((e) => toast(esc(reason(e)), 'err'));
 $('myName').onchange = (e) => {
   if (!me) return;
   names[me.toLowerCase()] = e.target.value.trim();
   save('payday.names', names);
+  if (!demo) fillAccounts();
   render();
 };
 
@@ -726,7 +755,7 @@ function render() {
     if (inv.status === 0) a = '<span style="color:var(--muted);font-size:13px">⏳ Waiting for the client to confirm</span>';
     else if (mine(inv.holder) && (inv.status === 1 || inv.status === 3)) {
       const suggested = ethers.formatEther(inv.amount * 97n / 100n);
-      a = `<input id="price-${inv.id}" type="number" step="0.001" value="${suggested}"><button class="small" data-act="list" data-id="${inv.id}">Sell for cash now</button>`;
+      a = `<input id="price-${inv.id}" type="number" step="any" value="${suggested}"><button class="small" data-act="list" data-id="${inv.id}">Sell for cash now</button>`;
     } else if (inv.status === 2) a = `<span style="color:var(--muted);font-size:13px">On the market for ${avax(inv.price)} AVAX</span>`;
     else if (inv.status === 3) a = `<span style="color:var(--ok);font-size:13px;font-weight:600">💸 Sold to ${who(inv.holder)}, cash received</span>`;
     return invCard(inv, a);

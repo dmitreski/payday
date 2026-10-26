@@ -46,6 +46,19 @@ Then open http://localhost:8000 in Chrome.
 - **Demo mode** (default): a simulated chain in the browser with the same rules as the contract. No wallet needed.
 - **Live mode**: click "Switch to live (Fuji)", paste a deployed contract address, and connect MetaMask on Avalanche Fuji. Opening the page from `http://localhost` is required, because MetaMask doesn't connect to pages opened as files.
 
+## Deployment
+
+Live on **Avalanche Fuji testnet** (C-Chain, chain ID 43113), source verified on Snowtrace.
+
+| | |
+|---|---|
+| Contract | [`0x9983d1f7aF8328a92cFb76cBeb12c7894D14D0Ed`](https://testnet.snowtrace.io/address/0x9983d1f7aF8328a92cFb76cBeb12c7894D14D0Ed) |
+| Deploy transaction | [`0x94a7520c…3309a`](https://testnet.snowtrace.io/tx/0x94a7520cf47311eae78f02209d5109d4d15748f203238ff928ec46582de3309a) |
+| Block | 60051288 |
+| Deployed | 26 October 2026 |
+
+Paste the contract address into the app's live mode to use it.
+
 ## Status
 
 Hackathon prototype on the Avalanche **Fuji testnet**. **Not ready for mainnet or real funds.** Before mainnet it needs: stablecoin payments, private invoice data (hash only on-chain), verified companies, pull payments, an emergency pause, a way to cancel or reprice a listing, and an independent security audit.
