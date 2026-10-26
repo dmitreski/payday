@@ -50,6 +50,8 @@ Then open http://localhost:8000 in Chrome. That's the landing page; the app is a
 
 Live on **Avalanche Fuji testnet** (C-Chain, chain ID 43113), source verified on Snowtrace.
 
+**Website:** https://payday-mauve.vercel.app (landing) · https://payday-mauve.vercel.app/app (app) · hosted on Vercel, deploys automatically on every push to `main` (root directory `app/`).
+
 | | |
 |---|---|
 | Contract | [`0x9983d1f7aF8328a92cFb76cBeb12c7894D14D0Ed`](https://testnet.snowtrace.io/address/0x9983d1f7aF8328a92cFb76cBeb12c7894D14D0Ed) |
