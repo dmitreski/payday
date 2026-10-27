@@ -217,21 +217,31 @@
   .contract a:hover { color: var(--accent-hover); }
 
   /* Honest status */
-  /* left: title, then milestones 1-3. right: milestones 4-7 from the top, so no empty box beside the title */
-  .status { display: grid; grid-template-columns: 1fr 1fr; grid-template-areas: "title b" "head b" "a b"; grid-template-rows: auto auto 1fr; column-gap: clamp(32px, 5vw, 72px); row-gap: 0; }
-  .status > div:first-child { grid-area: title; margin-bottom: clamp(32px, 5vw, 56px); }
-  .status .todo-head { grid-area: head; }
-  .todo-a { grid-area: a; } .todo-b { grid-area: b; align-self: start; }
+  /* snake: title + milestones 1-3 on the right, 4-5 on the left below, 6-7 on the right again; one line runs through all seven */
+  .status { --gap: clamp(32px, 5vw, 72px); display: grid; grid-template-columns: 1fr 1fr; column-gap: var(--gap); align-items: start; }
+  .status > div:first-child { grid-column: 1; grid-row: 1 / 5; margin-bottom: 40px; }
+  .todo, .todo-head { }
+  .todo { display: contents; list-style: none; margin: 0; padding: 0; }
+  .todo-head { grid-column: 2; grid-row: 1; }
   .todo-head { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; padding-bottom: 12px; font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
   .todo-head span:first-child { color: var(--soft); }
-  /* milestones as a chain: nodes on a rail, a pulse travelling down it */
-  .todo { list-style: none; margin: 0; padding: 14px 0 0; position: relative; background-image: radial-gradient(rgba(255,255,255,.07) 1px, transparent 1px); background-size: 24px 24px; border-top: 1px solid var(--line-strong); }
-  .todo::before { content: ""; position: absolute; left: 11px; top: 28px; bottom: 36px; width: 2px; background: var(--line-strong); }
-  .todo::after { content: ""; position: absolute; left: 11px; top: 28px; width: 2px; height: 90px; background: linear-gradient(transparent, var(--accent), transparent); box-shadow: 0 0 12px var(--accent); animation: travel 3.85s linear infinite; }
-  @keyframes travel { from { transform: translateY(-90px); opacity: 0; } 10%, 90% { opacity: 1; } to { transform: translateY(calc(var(--rail, 640px))); opacity: 0; } }
+  /* milestones as a chain: nodes on a line, each segment lights up in turn so a pulse runs through the whole snake */
   .todo li { position: relative; padding: 0 0 14px 46px; }
+  .todo li:nth-child(1) { grid-column: 2; grid-row: 2; } .todo li:nth-child(2) { grid-column: 2; grid-row: 3; } .todo li:nth-child(3) { grid-column: 2; grid-row: 4; }
+  .todo li:nth-child(4) { grid-column: 1; grid-row: 5; } .todo li:nth-child(5) { grid-column: 1; grid-row: 6; }
+  .todo li:nth-child(6) { grid-column: 2; grid-row: 7; } .todo li:nth-child(7) { grid-column: 2; grid-row: 8; }
+  .todo li::before, .todo li::after { content: ""; position: absolute; pointer-events: none; border: 0 solid var(--line-strong); animation: lit 3.85s ease-out infinite; }
+  .todo li:not(:last-child)::before { left: 11px; top: 34px; height: 100%; border-left-width: 2px; }
+  /* turn left (3 to 4): down, across to the left column, down */
+  .todo li:nth-child(3)::before { height: auto; bottom: 7px; left: calc(11px - 100% - var(--gap)); width: calc(100% + var(--gap) + 2px); border-left-width: 0; border-right-width: 2px; border-bottom-width: 2px; border-bottom-right-radius: 14px; }
+  /* turn right (5 to 6) */
+  .todo li:nth-child(5)::before { height: auto; bottom: 7px; width: calc(100% + var(--gap)); border-bottom-width: 2px; border-bottom-left-radius: 14px; }
+  .todo li:nth-child(4)::after, .todo li:nth-child(6)::after { left: 11px; top: -7px; height: 41px; border-left-width: 2px; }
+  .todo li::before, .todo li::after { animation-delay: calc((var(--i, 1) - 1) * .55s); }
+  @keyframes lit { 0%, 100% { border-color: var(--line-strong); } 8%, 20% { border-color: var(--accent); } }
   .node { position: absolute; left: 4px; top: 26px; width: 16px; height: 16px; transform: rotate(45deg); background: var(--bg); border: 2px solid var(--accent); z-index: 1; }
   .node::after { content: ""; position: absolute; inset: -2px; border: 2px solid var(--accent); animation: ring 3.85s ease-out infinite; opacity: 0; }
+  .todo li:nth-child(1) { --i: 1; } .todo li:nth-child(2) { --i: 2; } .todo li:nth-child(3) { --i: 3; } .todo li:nth-child(4) { --i: 4; } .todo li:nth-child(5) { --i: 5; } .todo li:nth-child(6) { --i: 6; } .todo li:nth-child(7) { --i: 7; }
   .todo li:nth-child(1) .node::after { animation-delay: 0s; } .todo li:nth-child(2) .node::after { animation-delay: .55s; } .todo li:nth-child(3) .node::after { animation-delay: 1.1s; } .todo li:nth-child(4) .node::after { animation-delay: 1.65s; }
   .todo li:nth-child(5) .node::after { animation-delay: 2.2s; } .todo li:nth-child(6) .node::after { animation-delay: 2.75s; } .todo li:nth-child(7) .node::after { animation-delay: 3.3s; }
   @keyframes ring { 0% { transform: scale(1); opacity: .9; } 25%, 100% { transform: scale(2.4); opacity: 0; } }
@@ -268,8 +278,12 @@
   @media (max-width: 960px) {
     .nav-links a:not(.nav-cta) { display: none; }
     .split, .proof-grid { grid-template-columns: 1fr; }
-    .status { grid-template-columns: 1fr; grid-template-areas: "title" "head" "a" "b"; grid-template-rows: auto; }
-    .todo-b { border-top: 0; padding-top: 0; }
+    .status { grid-template-columns: 1fr; }
+    .status > div:first-child, .todo-head, .todo li:nth-child(n) { grid-column: 1; grid-row: auto; }
+    .status > div:first-child { margin-bottom: 32px; }
+    .todo li:nth-child(n)::before { left: 11px; width: auto; top: 34px; bottom: auto; height: 100%; border-width: 0 0 0 2px; border-radius: 0; }
+    .todo li:nth-child(7)::before { display: none; }
+    .todo li:nth-child(n)::after { display: none; }
     /* cards stack vertically and open downwards */
     .acc { flex-direction: column; height: auto; }
     .acard { flex: none; border-radius: 16px; display: grid; grid-template-rows: 64px 0fr; transition: grid-template-rows .8s cubic-bezier(.165,.84,.44,1); }
@@ -312,7 +326,7 @@
     /* keep the strip looping (iPhones with Reduce Motion on used to get a wrapped pile of logos); just slower, and a tap pauses it */
     .track { animation: loop 120s linear infinite !important; }
     .reveal { opacity: 1; transform: none; }
-    .todo::after, .node::after { animation: none !important; opacity: 0; }
+    .todo li::before, .todo li::after { animation: none !important; } .node::after { animation: none !important; opacity: 0; }
   }
 </style>
 </head>
@@ -474,16 +488,14 @@
         <p class="lead reveal d1" style="margin-top:24px">PayDay runs with test AVAX on Fuji. It isn't audited and isn't ready for real money. If a client never pays, the investor takes the loss, but keeps a confirmed, timestamped record of the debt to take to court. This is what comes before mainnet.</p>
       </div>
       <div class="todo-head reveal d1"><span>Before mainnet</span><span>0 of 7 done</span></div>
-      <ul class="todo reveal d1 todo-a">
-          <li><span class="node" aria-hidden="true"></span><div class="blk"><div><small>Milestone 01</small><b>Verified companies</b><span>Registry check, signed wallet proof and a binding agreement. You see "Supermarket DOOEL ✓", not 0x…</span></div><em class="chip-plan">Planned</em></div></li>
-          <li><span class="node" aria-hidden="true"></span><div class="blk"><div><small>Milestone 02</small><b>The real invoice on-chain</b><span>A fingerprint of the actual signed invoice document</span></div><em class="chip-plan">Planned</em></div></li>
-          <li><span class="node" aria-hidden="true"></span><div class="blk"><div><small>Milestone 03</small><b>Investor agreement</b><span>The debt legally moves to the investor who buys it</span></div><em class="chip-plan">Planned</em></div></li>
-      </ul>
-      <ul class="todo reveal d1 todo-b">
-          <li><span class="node" aria-hidden="true"></span><div class="blk"><div><small>Milestone 04</small><b>Stablecoin payments</b><span>Price invoices in USDC, not AVAX</span></div><em class="chip-plan">Planned</em></div></li>
-          <li><span class="node" aria-hidden="true"></span><div class="blk"><div><small>Milestone 05</small><b>Private invoice data</b><span>Only a fingerprint on-chain</span></div><em class="chip-plan">Planned</em></div></li>
-          <li><span class="node" aria-hidden="true"></span><div class="blk"><div><small>Milestone 06</small><b>Emergency pause</b><span>Stop the contract if something breaks</span></div><em class="chip-plan">Planned</em></div></li>
-          <li><span class="node" aria-hidden="true"></span><div class="blk"><div><small>Milestone 07</small><b>Independent security audit</b><span>Before any real funds</span></div><em class="chip-plan">Planned</em></div></li>
+      <ul class="todo">
+        <li class="reveal d1"><span class="node" aria-hidden="true"></span><div class="blk"><div><small>Milestone 01</small><b>Verified companies</b><span>Registry check, signed wallet proof and a binding agreement. You see "Supermarket DOOEL ✓", not 0x…</span></div><em class="chip-plan">Planned</em></div></li>
+        <li class="reveal d1"><span class="node" aria-hidden="true"></span><div class="blk"><div><small>Milestone 02</small><b>The real invoice on-chain</b><span>A fingerprint of the actual signed invoice document</span></div><em class="chip-plan">Planned</em></div></li>
+        <li class="reveal d1"><span class="node" aria-hidden="true"></span><div class="blk"><div><small>Milestone 03</small><b>Investor agreement</b><span>The debt legally moves to the investor who buys it</span></div><em class="chip-plan">Planned</em></div></li>
+        <li class="reveal d2"><span class="node" aria-hidden="true"></span><div class="blk"><div><small>Milestone 04</small><b>Stablecoin payments</b><span>Price invoices in USDC, not AVAX</span></div><em class="chip-plan">Planned</em></div></li>
+        <li class="reveal d2"><span class="node" aria-hidden="true"></span><div class="blk"><div><small>Milestone 05</small><b>Private invoice data</b><span>Only a fingerprint on-chain</span></div><em class="chip-plan">Planned</em></div></li>
+        <li class="reveal d2"><span class="node" aria-hidden="true"></span><div class="blk"><div><small>Milestone 06</small><b>Emergency pause</b><span>Stop the contract if something breaks</span></div><em class="chip-plan">Planned</em></div></li>
+        <li class="reveal d2"><span class="node" aria-hidden="true"></span><div class="blk"><div><small>Milestone 07</small><b>Independent security audit</b><span>Before any real funds</span></div><em class="chip-plan">Planned</em></div></li>
       </ul>
     </div>
   </section>
@@ -505,7 +517,7 @@
 
 <footer>
   <div class="container">
-    <span>PayDay · built by David Mitreski in Prilep. An independent project on Avalanche.</span>
+    <span>PayDay · built by David, Martino, Davor and Juliano in Prilep. An independent project on Avalanche.</span>
     <a id="footLink" target="_blank" rel="noopener">Contract on Snowtrace ↗</a>
   </div>
 </footer>
@@ -536,10 +548,6 @@ document.querySelectorAll('.sp > img').forEach((img) => {
   };
   img.complete ? fit() : img.addEventListener('load', fit);
 });
-
-// pulse travels the whole rail, whatever its height
-const setRails = () => document.querySelectorAll('.todo').forEach((r) => r.style.setProperty('--rail', (r.offsetHeight - 40) + 'px'));
-setRails(); addEventListener('resize', setRails);
 
 // how it works: one open card at a time, each with an invoice ticket showing what changed
 const STEPS = [
