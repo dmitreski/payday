@@ -86,3 +86,8 @@ Status badges: Created grey, Confirmed blue `#64a8ff`, Listed violet `#bf8af2`, 
 - Title and description stacked on the left, a small status chip on the right (red outline "Planned"; use green "Live" when something ships). A label row above shows the group and a count ("0 of 7 done"). Never right-aligned grey descriptions across a wide gap.
 - The status section: title and intro left-aligned on top, a snake: milestones 1-3 on the right level with the title, 4-5 on the left below, 6-7 on the right again, one line running through all seven with elbows between. Phones get one straight line. Each milestone is a chain: diamond nodes on a vertical rail, one card ("block") per milestone with a mono "Milestone 01" label, a red pulse travelling down the rail and a ring pulse on each node. Pulses stop under Reduce Motion (static rail stays). Cards stack the chip under the text on phones.
 - Landing hero on desktop: proof points sit directly above the buttons.
+
+## Pinned scroll (landing "How it works", phones)
+- On phones the cards section is pinned to the screen and scroll progress opens the cards one by one (01 to 05), then the page continues. It is called a pinned scroll section (scrollytelling); the scroll is never blocked, the page is just taller (60svh per card).
+- Frame must fit one phone screen (about 590px under the nav). Closed rows are 34px, the open card is compact, the "Issued by" row and the who-label are hidden on phones.
+- Tapping a card scrolls to its slot, so tap and scroll never disagree. Desktop keeps the click accordion.

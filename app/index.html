@@ -285,6 +285,9 @@
     .todo li:nth-child(7)::before { display: none; }
     .todo li:nth-child(n)::after { display: none; }
     /* cards stack vertically and open downwards */
+    /* phones: the cards pin to the screen and scrolling opens them one by one (see the cards script); the page height does the timing, nothing hijacks the scroll */
+    .acc-track { height: calc(var(--n, 5) * 60svh + 100svh); }
+    .acc-wrap { position: sticky; top: 76px; }
     .acc { flex-direction: column; height: auto; }
     .acard { flex: none; border-radius: 16px; display: grid; grid-template-rows: 64px 0fr; transition: grid-template-rows .8s cubic-bezier(.165,.84,.44,1); }
     .acard.open { grid-template-rows: 64px 1fr; }
@@ -299,6 +302,25 @@
     .acard .kicker { display: none; }
     .ticket { position: relative; left: auto; right: auto; bottom: auto; width: auto; margin: 24px 0 -20px; transform: none; }
     .acard.open .ticket { transform: none; }
+    .acc { gap: 4px; }
+    .acard { border-radius: 12px; grid-template-rows: 34px 0fr; }
+    .acard.open { grid-template-rows: 40px 1fr; }
+    .acard .tabx { padding: 0 14px; gap: 12px; align-self: stretch; height: 100%; }
+    .acard .tname { font-size: 13px; }
+    .acard .n, .acard.open .n { font-size: 14px; }
+    .acard .go { width: 26px; height: 26px; font-size: 13px; }
+    .acard:not(.open) .go { display: none; }
+    .acard .bodyx { padding: 0 14px 10px; }
+    .acard .cols { gap: 8px; padding-top: 0; }
+    .acard .cols h3 { font-size: 24px; line-height: .95; }
+    .acard .cols p { font-size: 14px; line-height: 1.38; margin: 6px 0 0; }
+    .acard .ticket { margin: 10px 0 0; padding: 10px 12px; }
+    .acard .t-head { font-size: 11px; }
+    .acard .t-amt { font-size: 26px; margin: 4px 0 0; }
+    .acard .t-rows { margin: 6px 0 0; gap: 0; }
+    .acard .t-row { padding: 4px 8px; font-size: 13px; }
+    .acard .t-row:first-child:not(.hi) { display: none; }
+    .acard .who { display: none; }
     .tiles { grid-template-columns: 1fr 1fr; }
   }
   @media (max-width: 640px) {
@@ -413,7 +435,7 @@
 
   <!-- HOW IT WORKS -->
   <section class="sec" id="how" style="padding-top:0">
-    <div class="acc-wrap"><div class="acc reveal" id="acc"></div></div>
+    <div class="acc-track" id="accTrack"><div class="acc-wrap"><div class="acc reveal" id="acc"></div></div></div>
   </section>
 
   <!-- WHY ON-CHAIN -->
@@ -597,10 +619,26 @@ const STEPS = [
     c.classList.toggle('open', k === i);
     c.querySelector('.tabx').setAttribute('aria-expanded', k === i);
   });
+  // phones: scroll position decides which card is open
+  const track = document.getElementById('accTrack'), phone = matchMedia('(max-width: 960px)');
+  track.style.setProperty('--n', all.length);
+  const seg = () => innerHeight * 0.6;
+  let cur = 0;
+  const sync = () => {
+    if (!phone.matches) return;
+    const i = Math.max(0, Math.min(all.length - 1, Math.floor((76 - track.getBoundingClientRect().top) / seg())));
+    if (i !== cur) { cur = i; open(i); }
+  };
+  addEventListener('scroll', sync, { passive: true });
+  // tapping a card on a phone scrolls to that card's slot, so tap and scroll never disagree
+  const go = (i) => {
+    if (!phone.matches) return open(i);
+    scrollTo({ top: track.getBoundingClientRect().top + scrollY - 76 + i * seg() + 4, behavior: 'smooth' });
+  };
   all.forEach((c, i) => {
-    c.querySelector('.tabx').onclick = () => open(i);
+    c.querySelector('.tabx').onclick = () => go(i);
     // the black arrow on the open card goes to the next step
-    c.querySelector('.go').onclick = (e) => { if (c.classList.contains('open')) { e.stopPropagation(); open((i + 1) % all.length); } };
+    c.querySelector('.go').onclick = (e) => { if (c.classList.contains('open')) { e.stopPropagation(); go((i + 1) % all.length); } };
   });
   // content inside each card keeps the open width, so it slides into view as the card grows
   const size = () => {
