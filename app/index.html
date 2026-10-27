@@ -217,8 +217,11 @@
   .contract a:hover { color: var(--accent-hover); }
 
   /* Honest status */
-  .status { display: grid; grid-template-columns: 1fr; gap: clamp(32px, 5vw, 64px); }
-  .todo-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 0 clamp(24px, 4vw, 56px); align-items: start; }
+  /* left: title, then milestones 1-3. right: milestones 4-7 from the top, so no empty box beside the title */
+  .status { display: grid; grid-template-columns: 1fr 1fr; grid-template-areas: "title b" "head b" "a b"; grid-template-rows: auto auto 1fr; column-gap: clamp(32px, 5vw, 72px); row-gap: 0; }
+  .status > div:first-child { grid-area: title; margin-bottom: clamp(32px, 5vw, 56px); }
+  .status .todo-head { grid-area: head; }
+  .todo-a { grid-area: a; } .todo-b { grid-area: b; align-self: start; }
   .todo-head { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; padding-bottom: 12px; font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
   .todo-head span:first-child { color: var(--soft); }
   /* milestones as a chain: nodes on a rail, a pulse travelling down it */
@@ -264,7 +267,9 @@
   @media (max-width: 1140px) { .tiles { grid-template-columns: 1fr 1fr; } .tile { min-height: 220px; } }
   @media (max-width: 960px) {
     .nav-links a:not(.nav-cta) { display: none; }
-    .split, .proof-grid, .status, .todo-cols { grid-template-columns: 1fr; }
+    .split, .proof-grid { grid-template-columns: 1fr; }
+    .status { grid-template-columns: 1fr; grid-template-areas: "title" "head" "a" "b"; grid-template-rows: auto; }
+    .todo-b { border-top: 0; padding-top: 0; }
     /* cards stack vertically and open downwards */
     .acc { flex-direction: column; height: auto; }
     .acard { flex: none; border-radius: 16px; display: grid; grid-template-rows: 64px 0fr; transition: grid-template-rows .8s cubic-bezier(.165,.84,.44,1); }
@@ -468,22 +473,18 @@
         <h2 class="display h2 reveal" style="margin-top:20px">Testnet<br><span class="red">prototype.</span></h2>
         <p class="lead reveal d1" style="margin-top:24px">PayDay runs with test AVAX on Fuji. It isn't audited and isn't ready for real money. If a client never pays, the investor takes the loss, but keeps a confirmed, timestamped record of the debt to take to court. This is what comes before mainnet.</p>
       </div>
-      <div class="reveal d1">
-        <div class="todo-head"><span>Before mainnet</span><span>0 of 7 done</span></div>
-        <div class="todo-cols">
-        <ul class="todo">
+      <div class="todo-head reveal d1"><span>Before mainnet</span><span>0 of 7 done</span></div>
+      <ul class="todo reveal d1 todo-a">
           <li><span class="node" aria-hidden="true"></span><div class="blk"><div><small>Milestone 01</small><b>Verified companies</b><span>Registry check, signed wallet proof and a binding agreement. You see "Supermarket DOOEL ✓", not 0x…</span></div><em class="chip-plan">Planned</em></div></li>
           <li><span class="node" aria-hidden="true"></span><div class="blk"><div><small>Milestone 02</small><b>The real invoice on-chain</b><span>A fingerprint of the actual signed invoice document</span></div><em class="chip-plan">Planned</em></div></li>
           <li><span class="node" aria-hidden="true"></span><div class="blk"><div><small>Milestone 03</small><b>Investor agreement</b><span>The debt legally moves to the investor who buys it</span></div><em class="chip-plan">Planned</em></div></li>
+      </ul>
+      <ul class="todo reveal d1 todo-b">
           <li><span class="node" aria-hidden="true"></span><div class="blk"><div><small>Milestone 04</small><b>Stablecoin payments</b><span>Price invoices in USDC, not AVAX</span></div><em class="chip-plan">Planned</em></div></li>
-        </ul>
-        <ul class="todo">
           <li><span class="node" aria-hidden="true"></span><div class="blk"><div><small>Milestone 05</small><b>Private invoice data</b><span>Only a fingerprint on-chain</span></div><em class="chip-plan">Planned</em></div></li>
           <li><span class="node" aria-hidden="true"></span><div class="blk"><div><small>Milestone 06</small><b>Emergency pause</b><span>Stop the contract if something breaks</span></div><em class="chip-plan">Planned</em></div></li>
           <li><span class="node" aria-hidden="true"></span><div class="blk"><div><small>Milestone 07</small><b>Independent security audit</b><span>Before any real funds</span></div><em class="chip-plan">Planned</em></div></li>
-        </ul>
-        </div>
-      </div>
+      </ul>
     </div>
   </section>
 
