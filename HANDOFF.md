@@ -15,7 +15,7 @@ Open pull requests that David has not approved yet. Claude tells David about eve
 
 | PR / branch | Who | What changed | Status |
 |---|---|---|---|
-| (none) | | | |
+| david/mobile-ux (pushed, no PR yet) | David | Phone UX fixes (navbar, tabs, fraud sheet, sponsor strip) | Waiting for David to check on his iPhone |
 
 ## In progress / stopped halfway
 
@@ -41,4 +41,5 @@ Things we agreed on, so nobody redoes the argument. Newest first.
 
 One line per merged or pushed change. Newest first. Format: `date, who, branch/PR, what changed, files`.
 
+- 2026-10-27, David, david/mobile-ux, phone fixes: one-row navbar, bottom tab bar, Fraud test in a sheet, sponsor strip keeps looping under Reduce Motion, tap to pause. app/app.html, app/index.html, DESIGN.md.
 - 2026-10-27, David, setup, added HANDOFF.md, PR template and teamwork rules.

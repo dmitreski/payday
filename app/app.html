@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>PayDay · App</title>
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <meta name="description" content="Invoice financing on Avalanche. Create, confirm, sell and pay invoices on-chain.">
@@ -121,15 +121,17 @@
   .tab:hover { background: transparent; color: var(--text); }
   .tab.active { color: var(--text); border-bottom-color: var(--accent); }
 
+  .tab svg { display: none; width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+
   /* Cards */
   .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px 20px; }
   .card h2 { margin: 0; font-size: 18px; letter-spacing: -.005em; font-weight: 900; text-transform: uppercase; }
   .card .sub { margin: 4px 0 14px; color: var(--muted); font-size: 14px; }
-  .fraud { background: var(--err-soft); border-color: transparent; border-left: 3px solid var(--accent); }
-  .fraud h2 { color: var(--accent); }
-  .fraud .row { grid-template-columns: 90px 1fr auto; align-items: end; }
+  .card-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+  .card-head .ghost { flex: none; margin-top: 2px; }
+  .fraud-dlg { border-left-color: var(--accent); }
+  .fraud-dlg .row { grid-template-columns: 110px 1fr; }
   .ref-row { grid-template-columns: 1fr auto; align-items: end; }
-  .fraud .sub { margin-bottom: 12px; }
 
   /* Invoice card */
   .inv { border: 1px solid var(--line); border-radius: var(--radius-md); padding: 16px; margin-bottom: 12px; background: var(--surface-2); transition: box-shadow .2s, border-color .2s; }
@@ -235,10 +237,27 @@
     .outcome .v { font-size: 18px; }
     .sheet-in { padding: 20px 16px; }
     .sheet h2 { font-size: 22px; }
-    .row, .fraud .row, .ref-row { grid-template-columns: 1fr; }
+    .row, .ref-row { grid-template-columns: 1fr; }
+    .fraud-dlg .row { grid-template-columns: 96px 1fr; }
     .inv-meta { grid-template-columns: 1fr 1fr; }
     .hero { padding-top: 20px; }
     #bal, .name-input { display: none; }
+    /* navbar: one row. Logo left, wallet + demo right. */
+    .nav-inner, .nav-right { flex-wrap: nowrap; }
+    .nav-right { gap: 6px; min-width: 0; }
+    #addr.idle, .chip:has(#addr.idle) .dot { display: none; }
+    .chip:has(#addr.idle) { padding: 3px; }
+    #demoBtn { padding: 0; width: 44px; }
+    #demoBtn .lbl { display: none; }
+    #roleSelect { max-width: 150px; }
+    /* tabs: bottom bar, four equal slots, nothing scrolls sideways */
+    .wrap { padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
+    .tabs { position: fixed; left: 0; right: 0; bottom: 0; z-index: 45; width: auto; max-width: none; margin: 0; gap: 0; display: grid; grid-template-columns: repeat(4, 1fr); overflow: visible; background: rgba(19,19,20,.94); -webkit-backdrop-filter: blur(18px); backdrop-filter: blur(18px); border-top: 1px solid var(--line-strong); border-bottom: 0; padding-bottom: env(safe-area-inset-bottom); }
+    .tab { flex-direction: column; gap: 3px; min-height: 56px; padding: 7px 2px 6px; font-size: 10.5px; letter-spacing: .04em; border-bottom: 0; border-top: 2px solid transparent; margin: 0; }
+    .tab svg { display: block; }
+    .tab .x { display: none; }
+    .tab.active { border-top-color: var(--accent); }
+    .tab.active svg { color: var(--accent); }
     .card { padding: 16px; }
     .inv-actions button { flex: 1; }
     .demo-bar .txt { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -255,12 +274,12 @@
         <span class="dot" id="dot"></span>
         <select id="roleSelect" class="hidden" aria-label="Who are you in the demo?"></select>
         <input class="name-input" id="myName" placeholder="Name wallet" aria-label="Name this wallet">
-        <span class="mono" id="addr">Not connected</span>
+        <span class="mono idle" id="addr">Not connected</span>
         <select id="acctSelect" class="mono hidden" aria-label="Which of your wallets to act as"></select>
         <span id="bal"></span>
         <button class="small" id="connectBtn">Connect wallet</button>
       </div>
-      <button class="ghost" id="demoBtn">🧪 Demo mode</button>
+      <button class="ghost" id="demoBtn" aria-label="Demo mode"><span class="ic" aria-hidden="true">🧪</span><span class="lbl">Demo mode</span></button>
     </div>
   </div>
   <div class="demo-bar hidden" id="demoBar">
@@ -288,11 +307,11 @@
   </section>
 
 
-  <nav class="tabs" role="tablist">
-    <button class="tab active" data-tab="business">Business</button>
-    <button class="tab" data-tab="client">Client</button>
-    <button class="tab" data-tab="investor">Investor</button>
-    <button class="tab" data-tab="board">Public board</button>
+  <nav class="tabs" role="tablist" aria-label="Sections">
+    <button class="tab active" data-tab="business"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 21h18M5 21V8l7-4 7 4v13M9 21v-6h6v6"/></svg><span>Business</span></button>
+    <button class="tab" data-tab="client"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7"/></svg><span>Client</span></button>
+    <button class="tab" data-tab="investor"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17l6-6 4 4 8-8M15 7h6v6"/></svg><span>Investor</span></button>
+    <button class="tab" data-tab="board"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M9 10v10"/></svg><span><span class="x">Public </span>board</span></button>
   </nav>
 
   <!-- BUSINESS -->
@@ -314,19 +333,12 @@
             <button id="createBtn">Create invoice</button>
           </div>
         </div>
-        <div class="card fraud">
-          <h2>Fraud test</h2>
-          <p class="sub">Try to sell the same invoice twice. The contract refuses.</p>
-          <div class="row">
-            <div><label for="fId">Invoice #</label><input id="fId" type="number" value="1" min="1" inputmode="numeric"></div>
-            <div><label for="fPrice">Price (AVAX)</label><input id="fPrice" type="number" step="any" value="0.00485" inputmode="decimal"></div>
-            <button id="fraudBtn">Sell again</button>
-          </div>
-        </div>
       </div>
       <div class="card">
-        <h2>Your invoices</h2>
-        <p class="sub">Once the client confirms, sell it to get cash now.</p>
+        <div class="card-head">
+          <div><h2>Your invoices</h2><p class="sub">Once the client confirms, sell it to get cash now.</p></div>
+          <button class="ghost small" id="fraudOpen" aria-haspopup="dialog">🛡 Fraud test</button>
+        </div>
         <div id="bizList"></div>
       </div>
     </div>
@@ -409,6 +421,25 @@
       <button value="ok" id="sellOk">List for sale <span aria-hidden="true">→</span></button>
     </div>
     <p class="fine" id="sellFine"></p>
+  </form>
+</dialog>
+<dialog class="sheet fraud-dlg" id="fraudDlg" aria-labelledby="fraudTitle">
+  <form method="dialog" class="sheet-in">
+    <div class="sheet-top">
+      <div>
+        <h2 id="fraudTitle">Fraud <span>test</span></h2>
+        <p class="sub">Try to sell the same invoice twice. The contract refuses.</p>
+      </div>
+      <button class="x" value="cancel" formnovalidate aria-label="Close">✕</button>
+    </div>
+    <div class="row field" style="margin-top:18px">
+      <div><label for="fId">Invoice #</label><input id="fId" type="number" value="1" min="1" inputmode="numeric"></div>
+      <div><label for="fPrice">Price (AVAX)</label><input id="fPrice" type="number" step="any" value="0.00485" inputmode="decimal"></div>
+    </div>
+    <div class="sheet-actions">
+      <button class="ghost" value="cancel" formnovalidate>Cancel</button>
+      <button type="button" id="fraudBtn">Sell again</button>
+    </div>
   </form>
 </dialog>
 <div id="toasts" aria-live="polite"></div>
@@ -657,7 +688,9 @@ function setDemo(on) {
   if (on && !sim) seedDemo();
   signer = null;
   me = on ? DEMO_ACTORS[0].addr : null;
-  $('demoBtn').textContent = on ? '🔌 Switch to live (Fuji)' : '🧪 Demo mode';
+  $('demoBtn').querySelector('.ic').textContent = on ? '🔌' : '🧪';
+  $('demoBtn').querySelector('.lbl').textContent = on ? 'Switch to live (Fuji)' : 'Demo mode';
+  $('demoBtn').setAttribute('aria-label', on ? 'Switch to live (Fuji)' : 'Demo mode');
   $('demoBar').classList.toggle('hidden', !on);
   $('liveBar').classList.toggle('hidden', on);
   $('balCard').classList.toggle('hidden', !on);
@@ -673,6 +706,7 @@ function setDemo(on) {
     showTab('business');
   } else {
     $('addr').textContent = 'Not connected';
+    $('addr').classList.add('idle');
     $('connectBtn').textContent = 'Connect wallet';
     $('cClient').value = '';
   }
@@ -714,6 +748,7 @@ async function useAccount(addr) {
   signer = await new ethers.BrowserProvider(window.ethereum).getSigner(addr);
   me = await signer.getAddress();
   $('addr').textContent = short(me);
+  $('addr').classList.remove('idle');
   $('myName').value = names[me.toLowerCase()] || '';
   fillAccounts();
   await refresh();
@@ -767,7 +802,9 @@ $('createBtn').onclick = () => {
   const due = BigInt(now() + Number($('cDue').value) * Number($('cDueUnit').value));
   send('Create invoice', (c) => c.createInvoice(client, amount, due, $('cRef').value.trim()));
 };
+$('fraudOpen').onclick = () => $('fraudDlg').showModal();
 $('fraudBtn').onclick = () => {
+  $('fraudDlg').close(); // toasts sit under an open dialog, so close it first
   const id = BigInt($('fId').value);
   const price = ethers.parseEther($('fPrice').value || '0');
   send(`Re-sell invoice #${id}`, (c) => c.listForSale(id, price));
