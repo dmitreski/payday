@@ -41,6 +41,7 @@ Things we agreed on, so nobody redoes the argument. Newest first.
 
 One line per merged or pushed change. Newest first. Format: `date, who, branch/PR, what changed, files`.
 
+- 2026-10-27, David, main (68797f9), phone navbar rebuilt: account pill + ☰ menu (wallet block, labelled Demo mode); spacing under hero card and headline; fixed Public board tab font clash. app/app.html, DESIGN.md.
 - 2026-10-27, David, main (b7d8899), CI: forge tests and gitleaks secret scan run on every PR. .github/workflows/checks.yml.
 - 2026-10-27, David, main (61dcc9b), phone fixes: one-row navbar, bottom tab bar, Fraud test in a sheet, sponsor strip keeps looping under Reduce Motion, tap to pause. app/app.html, app/index.html, DESIGN.md.
 - 2026-10-27, David, setup, added HANDOFF.md, PR template and teamwork rules.
