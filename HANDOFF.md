@@ -41,6 +41,7 @@ Things we agreed on, so nobody redoes the argument. Newest first.
 
 One line per merged or pushed change. Newest first. Format: `date, who, branch/PR, what changed, files`.
 
+- 2026-10-27, David, main (8d2755f), phones: How it works cards pin to the screen and open one by one as you scroll (pinned scroll section); compact card frame. app/index.html, DESIGN.md.
 - 2026-10-27, David, main (e428d97), landing Status section is now a snake chain (3 right, 2 left, 2 right, one connected line, pulse runs through it); footer credits David, Martino, Davor and Juliano. app/index.html, DESIGN.md.
 - 2026-10-27, David, main (9e76c64), landing Status section is now a milestone chain: title on top, 7 milestones in two columns with pulsing rail and nodes, Planned chips. app/index.html, DESIGN.md.
 - 2026-10-27, David, main (16217a4), landing: proof points above hero buttons on desktop; Status section redesigned (grouped, stacked text, Planned chips, 0 of 7 counter). app/index.html, DESIGN.md.
