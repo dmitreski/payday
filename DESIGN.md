@@ -84,4 +84,5 @@ Status badges: Created grey, Confirmed blue `#64a8ff`, Listed violet `#bf8af2`, 
 
 ## Lists with status (landing "Status" section)
 - Title and description stacked on the left, a small status chip on the right (red outline "Planned"; use green "Live" when something ships). A label row above shows the group and a count ("0 of 7 done"). Never right-aligned grey descriptions across a wide gap.
+- The status list is a chain: diamond nodes on a vertical rail, one card ("block") per milestone with a mono "Milestone 01" label, a red pulse travelling down the rail and a ring pulse on each node. Pulses stop under Reduce Motion (static rail stays). Cards stack the chip under the text on phones.
 - Landing hero on desktop: proof points sit directly above the buttons.
