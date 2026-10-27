@@ -217,7 +217,8 @@
   .contract a:hover { color: var(--accent-hover); }
 
   /* Honest status */
-  .status { display: grid; grid-template-columns: 1fr 1.2fr; gap: clamp(32px, 6vw, 96px); }
+  .status { display: grid; grid-template-columns: 1fr; gap: clamp(32px, 5vw, 64px); }
+  .todo-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 0 clamp(24px, 4vw, 56px); align-items: start; }
   .todo-head { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; padding-bottom: 12px; font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
   .todo-head span:first-child { color: var(--soft); }
   /* milestones as a chain: nodes on a rail, a pulse travelling down it */
@@ -263,7 +264,7 @@
   @media (max-width: 1140px) { .tiles { grid-template-columns: 1fr 1fr; } .tile { min-height: 220px; } }
   @media (max-width: 960px) {
     .nav-links a:not(.nav-cta) { display: none; }
-    .split, .proof-grid, .status { grid-template-columns: 1fr; }
+    .split, .proof-grid, .status, .todo-cols { grid-template-columns: 1fr; }
     /* cards stack vertically and open downwards */
     .acc { flex-direction: column; height: auto; }
     .acard { flex: none; border-radius: 16px; display: grid; grid-template-rows: 64px 0fr; transition: grid-template-rows .8s cubic-bezier(.165,.84,.44,1); }
@@ -469,15 +470,19 @@
       </div>
       <div class="reveal d1">
         <div class="todo-head"><span>Before mainnet</span><span>0 of 7 done</span></div>
+        <div class="todo-cols">
         <ul class="todo">
           <li><span class="node" aria-hidden="true"></span><div class="blk"><div><small>Milestone 01</small><b>Verified companies</b><span>Registry check, signed wallet proof and a binding agreement. You see "Supermarket DOOEL ✓", not 0x…</span></div><em class="chip-plan">Planned</em></div></li>
           <li><span class="node" aria-hidden="true"></span><div class="blk"><div><small>Milestone 02</small><b>The real invoice on-chain</b><span>A fingerprint of the actual signed invoice document</span></div><em class="chip-plan">Planned</em></div></li>
           <li><span class="node" aria-hidden="true"></span><div class="blk"><div><small>Milestone 03</small><b>Investor agreement</b><span>The debt legally moves to the investor who buys it</span></div><em class="chip-plan">Planned</em></div></li>
           <li><span class="node" aria-hidden="true"></span><div class="blk"><div><small>Milestone 04</small><b>Stablecoin payments</b><span>Price invoices in USDC, not AVAX</span></div><em class="chip-plan">Planned</em></div></li>
+        </ul>
+        <ul class="todo">
           <li><span class="node" aria-hidden="true"></span><div class="blk"><div><small>Milestone 05</small><b>Private invoice data</b><span>Only a fingerprint on-chain</span></div><em class="chip-plan">Planned</em></div></li>
           <li><span class="node" aria-hidden="true"></span><div class="blk"><div><small>Milestone 06</small><b>Emergency pause</b><span>Stop the contract if something breaks</span></div><em class="chip-plan">Planned</em></div></li>
           <li><span class="node" aria-hidden="true"></span><div class="blk"><div><small>Milestone 07</small><b>Independent security audit</b><span>Before any real funds</span></div><em class="chip-plan">Planned</em></div></li>
         </ul>
+        </div>
       </div>
     </div>
   </section>
@@ -532,8 +537,8 @@ document.querySelectorAll('.sp > img').forEach((img) => {
 });
 
 // pulse travels the whole rail, whatever its height
-const rail = document.querySelector('.todo');
-if (rail) { const setRail = () => rail.style.setProperty('--rail', (rail.offsetHeight - 40) + 'px'); setRail(); addEventListener('resize', setRail); }
+const setRails = () => document.querySelectorAll('.todo').forEach((r) => r.style.setProperty('--rail', (r.offsetHeight - 40) + 'px'));
+setRails(); addEventListener('resize', setRails);
 
 // how it works: one open card at a time, each with an invoice ticket showing what changed
 const STEPS = [
