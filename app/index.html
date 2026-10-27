@@ -218,9 +218,14 @@
 
   /* Honest status */
   .status { display: grid; grid-template-columns: 1fr 1.2fr; gap: clamp(32px, 6vw, 96px); }
+  .todo-head { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; padding-bottom: 12px; font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+  .todo-head span:first-child { color: var(--soft); }
   .todo { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--line-strong); }
-  .todo li { display: flex; justify-content: space-between; gap: 16px; padding: 18px 0; border-bottom: 1px solid var(--line); font-size: 18px; font-weight: 600; }
-  .todo li span { color: var(--muted); font-size: 14px; font-weight: 500; text-align: right; }
+  .todo li { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 18px 0; border-bottom: 1px solid var(--line); }
+  .todo li div { min-width: 0; }
+  .todo li b { display: block; font-size: 18px; font-weight: 700; line-height: 1.3; }
+  .todo li span { display: block; margin-top: 4px; color: var(--muted); font-size: 14px; font-weight: 500; line-height: 1.45; max-width: 52ch; }
+  .chip-plan { flex: none; font-style: normal; font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); border: 1px solid color-mix(in srgb, var(--accent) 55%, transparent); border-radius: 4px; padding: 4px 9px; }
 
   /* CTA */
   .cta { background: var(--accent); overflow: hidden; margin: 0 var(--pad); border-radius: 22px; }
@@ -280,8 +285,6 @@
     .t-amt { font-size: 36px; }
     .btn, .btns .clip { width: 100%; }
     .hero { min-height: 0; }
-    .todo li { flex-direction: column; gap: 4px; }
-    .todo li span { text-align: left; }
   }
   @media (prefers-reduced-motion: reduce) {
     html { scroll-behavior: auto; }
@@ -449,15 +452,18 @@
         <h2 class="display h2 reveal" style="margin-top:20px">Testnet<br><span class="red">prototype.</span></h2>
         <p class="lead reveal d1" style="margin-top:24px">PayDay runs with test AVAX on Fuji. It isn't audited and isn't ready for real money. If a client never pays, the investor takes the loss, but keeps a confirmed, timestamped record of the debt to take to court. This is what comes before mainnet.</p>
       </div>
-      <ul class="todo reveal d1">
-        <li>Verified companies <span>Registry check, signed wallet proof and a binding agreement. You see "Supermarket DOOEL ✓", not 0x…</span></li>
-        <li>The real invoice on-chain <span>A fingerprint of the actual signed invoice document</span></li>
-        <li>Investor agreement <span>The debt legally moves to the investor who buys it</span></li>
-        <li>Stablecoin payments <span>Price invoices in USDC, not AVAX</span></li>
-        <li>Private invoice data <span>Only a fingerprint on-chain</span></li>
-        <li>Emergency pause <span>Stop the contract if something breaks</span></li>
-        <li>Independent security audit <span>Before any real funds</span></li>
-      </ul>
+      <div class="reveal d1">
+        <div class="todo-head"><span>Before mainnet</span><span>0 of 7 done</span></div>
+        <ul class="todo">
+          <li><div><b>Verified companies</b><span>Registry check, signed wallet proof and a binding agreement. You see "Supermarket DOOEL ✓", not 0x…</span></div><em class="chip-plan">Planned</em></li>
+          <li><div><b>The real invoice on-chain</b><span>A fingerprint of the actual signed invoice document</span></div><em class="chip-plan">Planned</em></li>
+          <li><div><b>Investor agreement</b><span>The debt legally moves to the investor who buys it</span></div><em class="chip-plan">Planned</em></li>
+          <li><div><b>Stablecoin payments</b><span>Price invoices in USDC, not AVAX</span></div><em class="chip-plan">Planned</em></li>
+          <li><div><b>Private invoice data</b><span>Only a fingerprint on-chain</span></div><em class="chip-plan">Planned</em></li>
+          <li><div><b>Emergency pause</b><span>Stop the contract if something breaks</span></div><em class="chip-plan">Planned</em></li>
+          <li><div><b>Independent security audit</b><span>Before any real funds</span></div><em class="chip-plan">Planned</em></li>
+        </ul>
+      </div>
     </div>
   </section>
 
