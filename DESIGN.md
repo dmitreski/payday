@@ -53,7 +53,7 @@ Status badges: Created grey, Confirmed blue `#64a8ff`, Listed violet `#bf8af2`, 
 - **Buttons:** square-ish (radius 0-6px). Primary red; secondary dark tile with a 3px red left edge. Big CTAs: 56px tall, label left, `→` right, arrow nudges right on hover.
 - **Cards:** radius 14-22px, no shadows on dark, 1px subtle border at most. Emphasis = 3px red left edge.
 - **Tabs:** uppercase 13px labels with a red underline for the active one. On phones (≤560px) they become a fixed bottom bar: four equal slots, icon over label, red top line and icon for the active one, safe-area padding. Never a sideways-scrolling strip.
-- **Phone navbar:** one row only. Logo left; wallet button and an icon-only demo button right. "Not connected" text is hidden until there is an address.
+- **Phone navbar:** one row only: logo, one account pill (red "Connect wallet" until connected, then a ghost pill with the short address or demo role), and a ☰ menu button. The menu panel holds the wallet block (account picker, name, balance, add accounts) and the Demo mode button with a plain-words explanation. Never icon-only for an action that needs explaining.
 - **Secondary tools (like Fraud test):** a small ghost button that opens a sheet (bottom sheet on phones). Never a permanent card between the user and their data.
 - **Looping strips:** keep looping under Reduce Motion (slower), tap to pause. Never fall back to a wrapped pile.
 - **Dropdowns:** never the browser's default arrow. Custom chevron (12×8, soft grey), 14px in from the right edge, 40px right padding so text never runs into it. Inside a chip: 8px inset, 30px padding.

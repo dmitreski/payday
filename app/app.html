@@ -61,6 +61,7 @@
   #bal:empty { display: none; }
   #acctSelect { width: auto; min-height: 36px; font-size: 13px; background-color: transparent; border: 0; padding: 0 30px 0 4px; background-position: right 8px center; }
   #roleSelect { width: auto; min-height: 36px; font-size: 14px; font-weight: 600; background-color: transparent; border: 0; padding: 0 30px 0 4px; background-position: right 8px center; }
+  .nav-mobile, .nav-help { display: none; }
   .name-input { width: 104px; min-height: 32px; padding: 0 8px; font-size: 14px; background: transparent; border-color: transparent; }
 
   /* Layout */
@@ -242,15 +243,25 @@
     .inv-meta { grid-template-columns: 1fr 1fr; }
     .hero { padding-top: 20px; padding-bottom: 20px; gap: 18px; }
     .hero h1 { line-height: 1.02; }
-    #bal, .name-input { display: none; }
-    /* navbar: one row. Logo left, wallet + demo right. */
-    .nav-inner, .nav-right { flex-wrap: nowrap; }
-    .nav-right { gap: 6px; min-width: 0; }
-    #addr.idle, .chip:has(#addr.idle) .dot { display: none; }
-    .chip:has(#addr.idle) { padding: 3px; }
-    #demoBtn { padding: 0; width: 44px; }
-    #demoBtn .lbl { display: none; }
-    #roleSelect { max-width: 150px; }
+    /* navbar: one row (logo, account pill, menu). Wallet + demo controls live in the menu panel, labelled in words. */
+    .nav-inner { position: relative; flex-wrap: nowrap; }
+    .nav-mobile { display: flex; align-items: center; gap: 8px; margin-left: auto; min-width: 0; }
+    #navPill { min-height: 44px; padding: 0 14px; max-width: 190px; min-width: 0; }
+    #navPill #pillTxt { overflow: hidden; text-overflow: ellipsis; }
+    #navPill.ghost { font-size: 14px; }
+    .nav-menu { width: 44px; padding: 0; flex: none; }
+    .nav-menu svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
+    .nav-right { display: none; position: absolute; left: 0; right: 0; top: 100%; flex-direction: column; align-items: stretch; flex-wrap: nowrap; gap: 12px; padding: 14px var(--pad) 18px; background: #1d1d1d; border-top: 1px solid var(--line); box-shadow: 0 18px 32px rgba(0,0,0,.7); max-height: calc(100dvh - 76px); overflow-y: auto; }
+    .nav.open .nav-right { display: flex; }
+    .nav.no-wallet .chip { display: none; }
+    .chip { flex-direction: column; align-items: stretch; gap: 10px; padding: 12px; }
+    .chip .dot { display: none; }
+    .chip .mono#addr { color: var(--muted); }
+    .chip select, .chip .name-input { width: 100%; max-width: none; background-color: var(--surface-2); border: 1px solid var(--line); padding: 0 40px 0 12px; min-height: 44px; }
+    .chip .name-input { padding-right: 12px; font-size: 16px; }
+    #bal { padding: 0; margin: 0; border: 0; }
+    .chip button, #demoBtn { width: 100%; min-height: 48px; }
+    .nav-help { display: block; margin: 0; font-size: 13px; color: var(--muted); }
     /* tabs: bottom bar, four equal slots, nothing scrolls sideways */
     .wrap { padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
     .tabs { position: fixed; left: 0; right: 0; bottom: 0; z-index: 45; width: auto; max-width: none; margin: 0; gap: 0; display: grid; grid-template-columns: repeat(4, 1fr); overflow: visible; background: rgba(19,19,20,.94); -webkit-backdrop-filter: blur(18px); backdrop-filter: blur(18px); border-top: 1px solid var(--line-strong); border-bottom: 0; padding-bottom: env(safe-area-inset-bottom); }
@@ -270,7 +281,11 @@
 <header class="nav">
   <div class="nav-inner">
     <a class="brand" href="index.html" aria-label="PayDay home"><svg class="mark" viewBox="0 0 29 24" aria-hidden="true"><rect x="1" y="4" width="5.2" height="17.5" fill="#e84142"/><path d="M7.6 4h5.2l8 8-8 8H7.6l8-8z" fill="#e84142"/><path d="M15.4 4h5.2l8 8-8 8h-5.2l8-8z" fill="#e84142" opacity=".55"/></svg><span class="word">payday</span></a>
-    <div class="nav-right">
+    <div class="nav-mobile">
+      <button id="navPill" type="button"><span class="dot hidden" id="pillDot"></span><span id="pillTxt">Connect wallet</span></button>
+      <button class="ghost nav-menu" id="navMenu" type="button" aria-label="Wallet and demo menu" aria-expanded="false" aria-controls="navPanel"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+    </div>
+    <div class="nav-right" id="navPanel">
       <div class="chip">
         <span class="dot" id="dot"></span>
         <select id="roleSelect" class="hidden" aria-label="Who are you in the demo?"></select>
@@ -280,7 +295,8 @@
         <span id="bal"></span>
         <button class="small" id="connectBtn">Connect wallet</button>
       </div>
-      <button class="ghost" id="demoBtn" aria-label="Demo mode"><span class="ic" aria-hidden="true">🧪</span><span class="lbl">Demo mode</span></button>
+      <button class="ghost" id="demoBtn"><span class="ic" aria-hidden="true">🧪</span><span class="lbl">Demo mode</span></button>
+      <p class="nav-help" id="navHelp"></p>
     </div>
   </div>
   <div class="demo-bar hidden" id="demoBar">
@@ -883,7 +899,30 @@ function invCard(inv, actions = '') {
 }
 const empty = (t) => `<div class="empty">${t}</div>`;
 
+// phone navbar: one pill shows who you are (or "Connect wallet"); the menu holds everything else
+function syncNav() {
+  let label = 'Connect wallet', on = false;
+  if (demo) { label = $('roleSelect').selectedOptions[0]?.text || 'Demo'; on = true; }
+  else if (me && signer) { const n = names[me.toLowerCase()]; label = (n ? n + ' · ' : '') + short(me); on = true; }
+  $('navMenu').closest('.nav').classList.toggle('no-wallet', !on); // nothing to show in the menu's wallet block yet
+  $('pillTxt').textContent = label;
+  $('navPill').classList.toggle('ghost', on);
+  $('pillDot').classList.toggle('hidden', !on);
+  $('pillDot').classList.toggle('on', on);
+  $('navHelp').textContent = demo
+    ? 'Demo mode: a simulated chain, no wallet needed. Switch to live to use your real wallet on Fuji.'
+    : 'Demo mode lets you try PayDay on a simulated chain. No wallet, no real money.';
+}
+const navMenu = (open) => { $('navMenu').closest('.nav').classList.toggle('open', open); $('navMenu').setAttribute('aria-expanded', open); };
+$('navMenu').onclick = () => navMenu(!$('navMenu').closest('.nav').classList.contains('open'));
+$('navPill').onclick = () => (!demo && !me) ? $('connectBtn').click() : $('navMenu').click();
+['connectBtn', 'demoBtn'].forEach((id) => $(id).addEventListener('click', () => navMenu(false)));
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') navMenu(false); });
+document.addEventListener('click', (e) => { if (!e.target.closest('.nav')) navMenu(false); });
+addEventListener('resize', () => { if (innerWidth > 560) navMenu(false); });
+
 function render() {
+  syncNav();
   const mine = (a) => same(a, me);
 
   // Business
