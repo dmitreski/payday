@@ -81,3 +81,7 @@ Status badges: Created grey, Confirmed blue `#64a8ff`, Listed violet `#bf8af2`, 
 ## Voice on the site
 - Plain words, no hype, no em dashes. Admit limits (testnet, not audited).
 - Credit tools by name when it builds trust ("Tested with Foundry").
+
+## Lists with status (landing "Status" section)
+- Title and description stacked on the left, a small status chip on the right (red outline "Planned"; use green "Live" when something ships). A label row above shows the group and a count ("0 of 7 done"). Never right-aligned grey descriptions across a wide gap.
+- Landing hero on desktop: proof points sit directly above the buttons.
