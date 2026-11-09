@@ -1,8 +1,8 @@
 # PayDay handoff
 
-The shared notebook for David and his partner. Whoever starts working reads this first. Whoever stops updates it first. Claude keeps it current in every session (see "Teamwork" in [CLAUDE.md](CLAUDE.md)).
+The shared notebook for David and his partners (Martino `martinodoneski`, Davor `davorste2`). Whoever starts working reads this first. Whoever stops updates it first. Claude keeps it current in every session (see "Teamwork" in [CLAUDE.md](CLAUDE.md)).
 
-Last updated: 2026-10-27 by David
+Last updated: 2026-11-09 by David
 
 ## Right now
 
@@ -35,12 +35,14 @@ Anyone can ask "what are the next steps?" and Claude answers from this list. Top
 
 Things we agreed on, so nobody redoes the argument. Newest first.
 
+- 2026-11-09: Davor (`davorste2`) added to the GitHub repo with write access. Same rules as Martino: branches and PRs only, `main` is protected (PR + David's approval via CODEOWNERS).
 - 2026-10-27: Nothing goes straight to `main`. Partner works on branches and opens pull requests. David reviews and merges.
 
 ## Change log
 
 One line per merged or pushed change. Newest first. Format: `date, who, branch/PR, what changed, files`.
 
+- 2026-11-09, David, david/team-access, Davor (`davorste2`) invited to the repo with write access; CLAUDE.md and HANDOFF.md now list both partners. CLAUDE.md, HANDOFF.md.
 - 2026-10-27, David, main (8d2755f), phones: How it works cards pin to the screen and open one by one as you scroll (pinned scroll section); compact card frame. app/index.html, DESIGN.md.
 - 2026-10-27, David, main (e428d97), landing Status section is now a snake chain (3 right, 2 left, 2 right, one connected line, pulse runs through it); footer credits David, Martino, Davor and Dzulijano. app/index.html, DESIGN.md.
 - 2026-10-27, David, main (9e76c64), landing Status section is now a milestone chain: title on top, 7 milestones in two columns with pulsing rail and nodes, Planned chips. app/index.html, DESIGN.md.

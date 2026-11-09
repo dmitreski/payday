@@ -6,8 +6,8 @@ Invoice financing on Avalanche. Contract in `contracts/`, tests in `test/` (Foun
 - Anything visual (new page, section, component, dialog, email, image) follows [DESIGN.md](DESIGN.md) without being asked: Avalanche-native look, Satoshi, one gutter, red accent, the P/D logo.
 - When David gives a new design or UX direction, apply it and update DESIGN.md in the same change, so the next session keeps it.
 
-## Teamwork (two people, two machines)
-David (`dmitreski`) owns `main` and approves everything. His partner works on branches. [HANDOFF.md](HANDOFF.md) is the shared memory so either person can stop and the other continues. Follow this in every session, whoever is typing.
+## Teamwork (David and his partners)
+David (`dmitreski`) owns `main` and approves everything. His partners work on branches: Martino (`martinodoneski`) and Davor (`davorste2`), both with write access. Every rule below that says "the partner" applies to each of them. [HANDOFF.md](HANDOFF.md) is the shared memory so either person can stop and the other continues. Follow this in every session, whoever is typing.
 
 **Start of every session**
 1. `git fetch`, then `git pull` on the current branch. Run `gh pr list` and read `HANDOFF.md` on `main` and on any open branch, since the other person's latest notes live on their branch.
